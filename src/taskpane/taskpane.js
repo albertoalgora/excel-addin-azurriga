@@ -59,6 +59,17 @@ export async function login() {
         return;
       }
 
+      // Mostrar spinner y ocultar error previo
+      const loadingDiv = document.getElementById("loginLoading");
+      const errorDiv = document.getElementById("loginError");
+      const submitButton = document.getElementById("loginSubmit");
+      const cancelButton = document.getElementById("loginCancel");
+      
+      loadingDiv.classList.remove("hidden");
+      errorDiv.classList.add("hidden");
+      submitButton.disabled = true;
+      cancelButton.disabled = true;
+
       try {
         console.log("Intentando hacer login con:", { username });
         
@@ -78,6 +89,11 @@ export async function login() {
         console.log("Respuesta recibida:", response);
         console.log("Status:", response.status);
         console.log("Status Text:", response.statusText);
+
+        // Ocultar spinner
+        loadingDiv.classList.add("hidden");
+        submitButton.disabled = false;
+        cancelButton.disabled = false;
 
         if (response.ok) {
           console.log("Login exitoso");
@@ -128,6 +144,12 @@ export async function login() {
         console.error("Error en login (catch):", error);
         console.error("Error message:", error.message);
         console.error("Error stack:", error.stack);
+        
+        // Ocultar spinner y reactivar botones
+        loadingDiv.classList.add("hidden");
+        submitButton.disabled = false;
+        cancelButton.disabled = false;
+        
         const errorDiv = document.getElementById("loginError");
         
         // Construir mensaje de error más detallado
