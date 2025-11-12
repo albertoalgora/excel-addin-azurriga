@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add-in Azurriga - Documentación</title>
+    <style>
+        @page {
+            margin: 2.5cm;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 210mm;
+            margin: 0 auto;
+            padding: 20px;
+            background: #fff;
+        }
+        
+        .header {
+            text-align: center;
+            padding: 40px 0;
+            border-bottom: 4px solid #0078d4;
+            margin-bottom: 40px;
+        }
+        
+        .header h1 {
+            color: #0078d4;
+            font-size: 42px;
+            margin: 0 0 10px 0;
+            font-weight: 600;
+        }
+        
+        .header .version {
+            color: #666;
+            font-size: 18px;
+            font-weight: 300;
+        }
+        
+        .section {
+            margin-bottom: 50px;
+            page-break-inside: avoid;
+        }
+        
+        .section h2 {
+            color: #0078d4;
+            font-size: 28px;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e1e1e1;
+        }
+        
+        .section h3 {
+            color: #333;
+            font-size: 20px;
+            margin-top: 30px;
+            margin-bottom: 15px;
+        }
+        
+        .section p {
+            margin-bottom: 15px;
+            text-align: justify;
+        }
+        
+        .screenshot-container {
+            margin: 30px 0;
+            text-align: center;
+            page-break-inside: avoid;
+        }
+        
+        .screenshot-container img {
+            max-width: 100%;
+            border: 1px solid #e1e1e1;
+            border-radius: 4px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .screenshot-container .caption {
+            margin-top: 10px;
+            color: #666;
+            font-size: 14px;
+            font-style: italic;
+        }
+        
+        .feature-list {
+            background: #f5f5f5;
+            padding: 20px 30px;
+            border-left: 4px solid #0078d4;
+            margin: 20px 0;
+        }
+        
+        .feature-list ul {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+        
+        .feature-list li {
+            margin-bottom: 10px;
+        }
+        
+        .footer {
+            margin-top: 60px;
+            padding-top: 20px;
+            border-top: 2px solid #e1e1e1;
+            text-align: center;
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .info-box {
+            background: #e7f3ff;
+            border: 1px solid #b3d9ff;
+            border-radius: 4px;
+            padding: 15px 20px;
+            margin: 20px 0;
+        }
+        
+        .info-box strong {
+            color: #0078d4;
+        }
+        
+        @media print {
+            body {
+                background: white;
+            }
+            .section {
+                page-break-inside: avoid;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Add-in Azurriga</h1>
+        <p class="version">Versión inicial 0.1</p>
+    </div>
+
+    <div class="section">
+        <h2>1. Introducción</h2>
+        <p>
+            El Add-in Azurriga es una solución empresarial integrada en Microsoft Excel que permite la gestión 
+            y sincronización de datos financieros directamente desde la hoja de cálculo. Esta herramienta 
+            proporciona acceso seguro a la información de cuentas, flujos y movimientos mediante una 
+            interfaz intuitiva y profesional.
+        </p>
+        
+        <div class="feature-list">
+            <strong>Características principales:</strong>
+            <ul>
+                <li>Autenticación segura con servidor OData</li>
+                <li>Descarga de datos de cuentas, flujos y movimientos</li>
+                <li>Importación de datos a Excel con formato estructurado</li>
+                <li>Interfaz moderna y responsive</li>
+                <li>Compatible con Microsoft 365 y Excel Online</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>2. Interfaz Principal</h2>
+        <p>
+            Al cargar el add-in en Excel, se presenta la ventana principal con tres botones de acción: 
+            Login, Download e Import. Los botones de descarga e importación permanecen deshabilitados 
+            hasta que el usuario se autentica correctamente.
+        </p>
+        
+        <div class="screenshot-container">
+            <img src="ruta_pantallazo_1.png" alt="Ventana inicial del add-in" style="max-width: 600px;">
+            <p class="caption">Figura 1: Ventana inicial del Add-in Azurriga</p>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>3. Proceso de Autenticación</h2>
+        
+        <h3>3.1 Ventana de Login</h3>
+        <p>
+            Al pulsar el botón "Login", se muestra un formulario modal donde el usuario debe ingresar 
+            sus credenciales (usuario y contraseña) para acceder al sistema.
+        </p>
+        
+        <div class="screenshot-container">
+            <img src="ruta_pantallazo_2.png" alt="Ventana de login" style="max-width: 600px;">
+            <p class="caption">Figura 2: Formulario de inicio de sesión</p>
+        </div>
+        
+        <h3>3.2 Conexión con el Servidor</h3>
+        <p>
+            Durante el proceso de autenticación, se muestra un indicador visual de carga con el mensaje 
+            "Conectando al servidor...", proporcionando retroalimentación al usuario sobre el estado 
+            de la operación.
+        </p>
+        
+        <div class="screenshot-container">
+            <img src="ruta_pantallazo_3.png" alt="Conectando al servidor" style="max-width: 600px;">
+            <p class="caption">Figura 3: Indicador de conexión con el servidor</p>
+        </div>
+        
+        <div class="info-box">
+            <strong>Nota:</strong> El add-in utiliza autenticación básica sobre HTTPS para garantizar 
+            la seguridad de las credenciales durante la transmisión.
+        </div>
+        
+        <h3>3.3 Confirmación de Sesión Iniciada</h3>
+        <p>
+            Una vez que la autenticación es exitosa, el botón "Login" cambia su apariencia para mostrar 
+            un mensaje de bienvenida personalizado con el nombre del usuario. El botón se muestra en 
+            color verde, indicando visualmente que la sesión ha sido establecida correctamente. 
+            Simultáneamente, se activan los botones "Download" e "Import", permitiendo al usuario 
+            acceder a las funcionalidades principales del add-in.
+        </p>
+        
+        <div class="screenshot-container">
+            <img src="ruta_pantallazo_3b.png" alt="Usuario logado exitosamente" style="max-width: 600px;">
+            <p class="caption">Figura 3b: Confirmación visual de sesión iniciada (botón verde con nombre de usuario)</p>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>4. Opciones de Descarga</h2>
+        <p>
+            Una vez autenticado, el usuario puede acceder a las opciones de descarga de datos. 
+            El sistema ofrece tres tipos principales de información:
+        </p>
+        
+        <h3>4.1 Descarga de Cuentas</h3>
+        <p>
+            Permite obtener el listado completo de cuentas con sus datos asociados. El usuario puede 
+            seleccionar la cantidad de registros a descargar (50, 75, 100, 500, 1000 o todos).
+        </p>
+        
+        <div class="screenshot-container">
+            <img src="ruta_pantallazo_4.png" alt="Descarga de cuentas" style="max-width: 600px;">
+            <p class="caption">Figura 4: Opciones de descarga de cuentas</p>
+        </div>
+        
+        <h3>4.2 Descarga de Flujos</h3>
+        <p>
+            Proporciona acceso a la información de flujos financieros, con las mismas opciones de 
+            límite de registros que las cuentas.
+        </p>
+        
+        <div class="screenshot-container">
+            <img src="ruta_pantallazo_5.png" alt="Descarga de flujos" style="max-width: 600px;">
+            <p class="caption">Figura 5: Opciones de descarga de flujos</p>
+        </div>
+        
+        <h3>4.3 Descarga de Movimientos</h3>
+        <p>
+            Ofrece la descarga de movimientos financieros con opciones avanzadas de personalización, 
+            permitiendo seleccionar los campos específicos a incluir en la exportación (Status, IsDebit, 
+            Amount, ValueDate, TrnDate, Description).
+        </p>
+        
+        <div class="screenshot-container">
+            <img src="ruta_pantallazo_6.png" alt="Descarga de movimientos" style="max-width: 600px;">
+            <p class="caption">Figura 6: Opciones de descarga de movimientos con selección de campos</p>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>5. Especificaciones Técnicas</h2>
+        
+        <div class="feature-list">
+            <strong>Tecnologías utilizadas:</strong>
+            <ul>
+                <li>Office.js API para integración con Excel</li>
+                <li>HTML5, CSS3 y JavaScript moderno (ES6+)</li>
+                <li>Protocolo OData para comunicación con el servidor</li>
+                <li>Webpack para empaquetado y optimización</li>
+                <li>Fluent UI para diseño consistente con Office</li>
+            </ul>
+        </div>
+        
+        <div class="info-box">
+            <strong>Requisitos del sistema:</strong><br>
+            • Microsoft Excel 2019 o superior / Microsoft 365<br>
+            • Excel Online (navegador web)<br>
+            • Conexión a Internet para acceso al servidor OData<br>
+            • Certificado HTTPS válido para el servidor
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>6. Instalación y Configuración</h2>
+        <p>
+            El add-in puede ser instalado de dos formas:
+        </p>
+        
+        <h3>6.1 Instalación desde URL (Recomendada)</h3>
+        <ol>
+            <li>Abrir Excel (Desktop o Online)</li>
+            <li>Ir a Insertar → Complementos de Office</li>
+            <li>Seleccionar "Cargar mi complemento"</li>
+            <li>Ingresar la URL del manifest: <code>https://albertoalgora.github.io/excel-addin-azurriga/manifest.xml</code></li>
+            <li>El add-in aparecerá en la pestaña Inicio</li>
+        </ol>
+        
+        <h3>6.2 Instalación desde Archivo Local</h3>
+        <ol>
+            <li>Descargar el archivo manifest-production.xml</li>
+            <li>En Excel, ir a Insertar → Complementos de Office → Mis complementos</li>
+            <li>Seleccionar "Cargar complemento" y elegir el archivo descargado</li>
+        </ol>
+    </div>
+
+    <div class="footer">
+        <p><strong>Add-in Azurriga</strong> - Versión 0.1</p>
+        <p>© 2025 Azurriga. Todos los derechos reservados.</p>
+        <p>Repositorio: <a href="https://github.com/albertoalgora/excel-addin-azurriga">github.com/albertoalgora/excel-addin-azurriga</a></p>
+    </div>
+</body>
+</html>

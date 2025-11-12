@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Soporte - Add-in Azurriga</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #0078d4;
+            border-bottom: 3px solid #0078d4;
+            padding-bottom: 15px;
+        }
+        h2 {
+            color: #0078d4;
+            margin-top: 30px;
+        }
+        .contact-card {
+            background: #e7f3ff;
+            padding: 20px;
+            border-radius: 4px;
+            margin: 20px 0;
+        }
+        .faq-item {
+            background: #f9f9f9;
+            padding: 15px;
+            margin: 15px 0;
+            border-left: 4px solid #0078d4;
+            border-radius: 4px;
+        }
+        .faq-question {
+            font-weight: bold;
+            color: #0078d4;
+            margin-bottom: 8px;
+        }
+        .faq-answer {
+            margin-left: 15px;
+        }
+        .troubleshooting {
+            background: #fff4e5;
+            padding: 15px;
+            border-left: 4px solid #ff8c00;
+            margin: 20px 0;
+        }
+        ul {
+            margin-left: 20px;
+        }
+        li {
+            margin-bottom: 10px;
+        }
+        .version-info {
+            background: #f0f0f0;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            margin: 10px 0;
+        }
+        a {
+            color: #0078d4;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+        .btn {
+            display: inline-block;
+            background: #0078d4;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 4px;
+            text-decoration: none;
+            margin: 10px 5px;
+        }
+        .btn:hover {
+            background: #005a9e;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Soporte Técnico - Add-in Azurriga</h1>
+        
+        <p>
+            Bienvenido al centro de soporte del Add-in Azurriga para Microsoft Excel. 
+            Aquí encontrará ayuda para resolver problemas comunes, contactar con soporte 
+            y acceder a la documentación completa.
+        </p>
+
+        <div class="contact-card">
+            <h2>Información de Contacto</h2>
+            <p><strong>Email de Soporte:</strong> soporte@azurriga.com</p>
+            <p><strong>GitHub:</strong> <a href="https://github.com/albertoalgora/excel-addin-azurriga" target="_blank">github.com/albertoalgora/excel-addin-azurriga</a></p>
+            <p><strong>Documentación:</strong> <a href="https://albertoalgora.github.io/excel-addin-azurriga/Documentacion-AddIn-Azurriga.html" target="_blank">Ver documentación completa</a></p>
+            <p><strong>Reportar Errores:</strong> <a href="https://github.com/albertoalgora/excel-addin-azurriga/issues" target="_blank">GitHub Issues</a></p>
+            
+            <div style="margin-top: 15px;">
+                <a href="mailto:soporte@azurriga.com" class="btn">Contactar Soporte</a>
+                <a href="https://github.com/albertoalgora/excel-addin-azurriga/issues/new" class="btn" target="_blank">Reportar Error</a>
+            </div>
+        </div>
+
+        <h2>Información del Sistema</h2>
+        <div class="version-info">
+            <strong>Versión del Add-in:</strong> 1.0.0.0<br>
+            <strong>Última actualización:</strong> Noviembre 2025<br>
+            <strong>Requisitos:</strong> Excel 2016+ o Microsoft 365<br>
+            <strong>Servidor OData:</strong> http://8cf33ac.online-server.cloud:1031
+        </div>
+
+        <h2>Preguntas Frecuentes (FAQ)</h2>
+
+        <div class="faq-item">
+            <div class="faq-question">¿Cómo instalo el Add-in?</div>
+            <div class="faq-answer">
+                <ol>
+                    <li>Descargue el archivo manifest.xml desde GitHub</li>
+                    <li>Abra Excel y vaya a Insertar > Complementos > Mis complementos</li>
+                    <li>Haga clic en "Administrar mis complementos"</li>
+                    <li>Seleccione "Cargar complemento" y elija el archivo manifest.xml</li>
+                    <li>El add-in aparecerá en la pestaña Inicio de Excel</li>
+                </ol>
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-question">¿Por qué no aparece el botón del Add-in?</div>
+            <div class="faq-answer">
+                <ul>
+                    <li>Verifique que el add-in está instalado correctamente</li>
+                    <li>Reinicie Excel completamente</li>
+                    <li>Compruebe que está usando Excel 2016 o posterior</li>
+                    <li>Vaya a Archivo > Opciones > Complementos y verifique que el add-in está activo</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-question">¿Qué hago si no puedo iniciar sesión?</div>
+            <div class="faq-answer">
+                <ul>
+                    <li>Verifique que su nombre de usuario y contraseña sean correctos</li>
+                    <li>Compruebe que tiene conexión a Internet</li>
+                    <li>Asegúrese de que el servidor esté disponible</li>
+                    <li>Contacte con su administrador para verificar sus credenciales</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-question">¿Los datos descargados se guardan en el servidor?</div>
+            <div class="faq-answer">
+                No. Los datos se descargan directamente a su archivo Excel local. 
+                No mantenemos copias de sus datos descargados. Usted tiene control 
+                total sobre su información.
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-question">¿Puedo usar el Add-in sin conexión a Internet?</div>
+            <div class="faq-answer">
+                No. El add-in requiere conexión a Internet para:
+                <ul>
+                    <li>Cargar la interfaz del complemento</li>
+                    <li>Autenticarse en el servidor</li>
+                    <li>Descargar datos desde el servidor OData</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-question">¿Qué formatos de datos se soportan?</div>
+            <div class="faq-answer">
+                El add-in descarga tres tipos de datos:
+                <ul>
+                    <li><strong>Cuentas:</strong> Código, descripción y saldo</li>
+                    <li><strong>Flujos de caja:</strong> Descripción, importe y tipo</li>
+                    <li><strong>Movimientos:</strong> Fecha, descripción, importe, cuenta</li>
+                </ul>
+                Todos los datos se insertan automáticamente con formato de tabla y encabezados.
+            </div>
+        </div>
+
+        <h2>Solución de Problemas Comunes</h2>
+
+        <div class="troubleshooting">
+            <h3>Error: "No se puede conectar al servidor"</h3>
+            <p><strong>Causa:</strong> Problema de conexión de red o servidor no disponible</p>
+            <p><strong>Solución:</strong></p>
+            <ul>
+                <li>Verifique su conexión a Internet</li>
+                <li>Compruebe que puede acceder a http://8cf33ac.online-server.cloud:1031</li>
+                <li>Verifique con su administrador que el servidor está operativo</li>
+                <li>Desactive temporalmente su firewall o antivirus para probar</li>
+            </ul>
+        </div>
+
+        <div class="troubleshooting">
+            <h3>Error: "Credenciales inválidas"</h3>
+            <p><strong>Causa:</strong> Usuario o contraseña incorrectos</p>
+            <p><strong>Solución:</strong></p>
+            <ul>
+                <li>Verifique que escribió correctamente su usuario y contraseña</li>
+                <li>Compruebe que su cuenta está activa</li>
+                <li>Contacte con su administrador para restablecer su contraseña</li>
+            </ul>
+        </div>
+
+        <div class="troubleshooting">
+            <h3>El Add-in no carga o muestra error</h3>
+            <p><strong>Causa:</strong> Certificado de seguridad, versión de Excel incompatible o problema de instalación</p>
+            <p><strong>Solución:</strong></p>
+            <ul>
+                <li>Asegúrese de usar Excel 2016 o posterior (o Microsoft 365)</li>
+                <li>Desinstale y vuelva a instalar el add-in</li>
+                <li>Limpie la caché de Office: Cierre Excel, elimine la carpeta %LocalAppData%\Microsoft\Office\16.0\Wef</li>
+                <li>Verifique que JavaScript está habilitado en su navegador predeterminado</li>
+            </ul>
+        </div>
+
+        <div class="troubleshooting">
+            <h3>Los datos no se insertan en Excel</h3>
+            <p><strong>Causa:</strong> Hoja protegida, celda seleccionada no válida o error en el formato de datos</p>
+            <p><strong>Solución:</strong></p>
+            <ul>
+                <li>Verifique que la hoja no está protegida</li>
+                <li>Seleccione una celda específica antes de descargar</li>
+                <li>Asegúrese de tener permisos de escritura en el archivo</li>
+                <li>Cierre otras aplicaciones que puedan bloquear Excel</li>
+            </ul>
+        </div>
+
+        <h2>Requisitos del Sistema</h2>
+        <ul>
+            <li><strong>Excel:</strong> Microsoft Excel 2016 o posterior, o Microsoft 365 (Excel Online)</li>
+            <li><strong>Sistema Operativo:</strong> Windows 10+, macOS 10.14+, o navegador web moderno</li>
+            <li><strong>Navegador:</strong> Edge, Chrome, Firefox o Safari (versión reciente)</li>
+            <li><strong>Conexión:</strong> Internet de banda ancha</li>
+            <li><strong>Permisos:</strong> Capacidad para instalar complementos de Office</li>
+        </ul>
+
+        <h2>Actualizaciones y Mejoras</h2>
+        <p>
+            El Add-in se actualiza periódicamente con nuevas funciones y correcciones. 
+            Las actualizaciones se descargan automáticamente cuando inicia Excel si hay conexión a Internet.
+        </p>
+        <p>
+            Para ver el historial de cambios completo, visite: 
+            <a href="https://github.com/albertoalgora/excel-addin-azurriga/releases" target="_blank">
+                GitHub Releases
+            </a>
+        </p>
+
+        <h2>Enviar Comentarios</h2>
+        <p>
+            Sus comentarios son importantes para mejorar el Add-in. Puede:
+        </p>
+        <ul>
+            <li>Enviar sugerencias por email a soporte@azurriga.com</li>
+            <li>Crear una solicitud de función en <a href="https://github.com/albertoalgora/excel-addin-azurriga/issues" target="_blank">GitHub Issues</a></li>
+            <li>Reportar errores con pasos detallados para reproducirlos</li>
+        </ul>
+
+        <h2>Recursos Adicionales</h2>
+        <ul>
+            <li><a href="https://albertoalgora.github.io/excel-addin-azurriga/Documentacion-AddIn-Azurriga.html" target="_blank">Documentación Completa del Usuario</a></li>
+            <li><a href="privacy-policy.html">Política de Privacidad</a></li>
+            <li><a href="terms-of-use.html">Términos de Uso</a></li>
+            <li><a href="https://github.com/albertoalgora/excel-addin-azurriga" target="_blank">Código Fuente (GitHub)</a></li>
+            <li><a href="https://docs.microsoft.com/office/dev/add-ins/" target="_blank">Documentación de Office Add-ins (Microsoft)</a></li>
+        </ul>
+
+        <h2>Horario de Soporte</h2>
+        <p>
+            <strong>Email:</strong> Respondemos en 24-48 horas laborables<br>
+            <strong>GitHub Issues:</strong> Revisamos diariamente<br>
+            <strong>Idiomas:</strong> Español e Inglés
+        </p>
+
+        <div class="contact-card" style="margin-top: 30px;">
+            <h2>¿Necesita Ayuda Inmediata?</h2>
+            <p>Si tiene un problema urgente o necesita asistencia técnica, no dude en contactarnos:</p>
+            <p>
+                <strong>Email:</strong> soporte@azurriga.com<br>
+                <strong>Asunto recomendado:</strong> "Add-in Azurriga - [breve descripción del problema]"
+            </p>
+            <p>
+                Por favor incluya en su mensaje:
+            </p>
+            <ul>
+                <li>Versión de Excel que está usando</li>
+                <li>Descripción detallada del problema</li>
+                <li>Pasos para reproducir el error</li>
+                <li>Capturas de pantalla si es posible</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>

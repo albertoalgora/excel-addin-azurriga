@@ -2,13 +2,13 @@
 <OfficeApp xmlns="http://schemas.microsoft.com/office/appforoffice/1.1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0" xmlns:ov="http://schemas.microsoft.com/office/taskpaneappversionoverrides" xsi:type="TaskPaneApp">
   <Id>adc7c00e-0ac0-4f01-ab64-4defa945ac7a</Id>
   <Version>1.0.0.0</Version>
-  <ProviderName>Contoso</ProviderName>
-  <DefaultLocale>en-US</DefaultLocale>
-  <DisplayName DefaultValue="Add-in Azurriga"/>
-  <Description DefaultValue="A template to get started."/>
+  <ProviderName>Azurriga</ProviderName>
+  <DefaultLocale>es-ES</DefaultLocale>
+  <DisplayName DefaultValue="Add-in Azurriga para Excel"/>
+  <Description DefaultValue="Conecta Excel con tu servidor OData para descargar cuentas, flujos de caja y movimientos contables de forma rápida y automática. Autenticación segura y formato automático de datos."/>
   <IconUrl DefaultValue="https://localhost:3000/assets/icon-32.png"/>
   <HighResolutionIconUrl DefaultValue="https://localhost:3000/assets/icon-64.png"/>
-  <SupportUrl DefaultValue="https://www.contoso.com/help"/>
+  <SupportUrl DefaultValue="https://albertoalgora.github.io/excel-addin-azurriga/support.html"/>
   <AppDomains>
     <AppDomain>https://www.contoso.com</AppDomain>
     <AppDomain>http://8cf33ac.online-server.cloud:1031</AppDomain>
