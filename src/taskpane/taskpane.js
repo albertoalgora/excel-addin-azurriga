@@ -3,13 +3,24 @@
  * See LICENSE in the project root for license information.
  */
 
-// Variable global para almacenar las credenciales
+/**
+ * Variable global para almacenar las credenciales del usuario autenticado
+ * @type {Object}
+ * @property {string|null} username - Nombre de usuario
+ * @property {string|null} password - Contraseña del usuario
+ * @property {boolean} isLoggedIn - Indica si hay una sesión activa
+ */
 let userCredentials = {
   username: null,
   password: null,
   isLoggedIn: false
 };
 
+/**
+ * Función de inicialización de Office.js
+ * Se ejecuta cuando el entorno de Office está listo para interactuar
+ * @param {Object} info - Información sobre el host de Office
+ */
 Office.onReady((info) => {
   if (info.host === Office.HostType.Excel) {
     document.getElementById("sideload-msg").classList.add("hidden");
@@ -32,6 +43,24 @@ Office.onReady((info) => {
   }
 });
 
+/**
+ * Gestiona el proceso completo de autenticación del usuario
+ * 
+ * Flujo:
+ * 1. Muestra un modal de inicio de sesión
+ * 2. Captura las credenciales (usuario y contraseña)
+ * 3. Valida las credenciales contra el servidor OData usando HTTP Basic Auth
+ * 4. Si la autenticación es exitosa:
+ *    - Guarda las credenciales en memoria
+ *    - Actualiza la UI (botón de login y habilita otras funciones)
+ *    - Muestra notificación de éxito
+ * 5. Si falla:
+ *    - Muestra mensaje de error en el modal
+ *    - Permite reintentar
+ * 
+ * @async
+ * @throws {Error} Si hay problemas de conexión o el modal no se encuentra en el DOM
+ */
 export async function login() {
   try {
     console.log("Función login iniciada");
@@ -186,6 +215,17 @@ export async function login() {
   }
 }
 
+/**
+ * Muestra una notificación temporal (popup) al usuario
+ * 
+ * @param {string} message - Mensaje a mostrar
+ * @param {string} [type='success'] - Tipo de notificación: 'success' (verde) o 'error' (rojo)
+ * 
+ * Características:
+ * - Se muestra durante 3 segundos
+ * - Se aplican estilos diferentes según el tipo
+ * - Se auto-oculta automáticamente
+ */
 function showNotification(message, type = 'success') {
   const popup = document.getElementById('notificationPopup');
   const messageEl = document.getElementById('notificationMessage');
@@ -206,7 +246,19 @@ function showNotification(message, type = 'success') {
   }, 3000);
 }
 
-// Función auxiliar para hacer peticiones autenticadas
+/**
+ * Wrapper para realizar peticiones HTTP autenticadas al servidor OData
+ * 
+ * Agrega automáticamente:
+ * - Header de autenticación HTTP Basic (Base64)
+ * - Headers de Content-Type y Accept para JSON
+ * 
+ * @async
+ * @param {string} url - URL del endpoint a consultar
+ * @param {Object} [options={}] - Opciones adicionales de fetch (se fusionan con las opciones por defecto)
+ * @returns {Promise<Response>} Promesa con la respuesta HTTP
+ * @throws {Error} Si el usuario no ha iniciado sesión
+ */
 async function authenticatedFetch(url, options = {}) {
   if (!userCredentials.isLoggedIn) {
     throw new Error("Debe iniciar sesión primero");
@@ -223,7 +275,17 @@ async function authenticatedFetch(url, options = {}) {
   return fetch(url, { ...defaultOptions, ...options });
 }
 
-// Función para mostrar el modal de descarga
+/**
+ * Muestra el modal de configuración de descarga
+ * 
+ * Permite al usuario configurar:
+ * - Tipo de descarga: Cuentas, Flujos de caja o Movimientos
+ * - Límite de registros: 50, 100, 500 o todos
+ * - Campos específicos (solo para Movimientos)
+ * 
+ * @async
+ * @throws {Error} Si el usuario no está autenticado o hay problemas con el DOM
+ */
 export async function showDownloadModal() {
   try {
     // Verificar que el usuario esté logueado
@@ -258,7 +320,15 @@ export async function showDownloadModal() {
   }
 }
 
-// Función para ejecutar la descarga según las opciones seleccionadas
+/**
+ * Recopila las opciones seleccionadas del modal y ejecuta la descarga
+ * 
+ * Validaciones:
+ * - Para Movimientos: verifica que se haya seleccionado al menos un campo
+ * 
+ * @async
+ * @throws {Error} Si no se cumplen las validaciones o hay problemas al preparar la descarga
+ */
 async function executeDownload() {
   try {
     const downloadType = document.getElementById("downloadType").value;
@@ -291,6 +361,32 @@ async function executeDownload() {
   }
 }
 
+/**
+ * ⭐ MÉTODO PRINCIPAL - Descarga datos del servidor OData e inserta en Excel
+ * 
+ * Proceso completo:
+ * 1. Suspende actualización de pantalla (optimización)
+ * 2. Construye URL OData con parámetros ($top, $select, $expand, $filter)
+ * 3. Realiza petición autenticada al servidor (con reintentos)
+ * 4. Procesa la respuesta JSON
+ * 5. Gestiona hojas en Excel (elimina si existe, crea nueva)
+ * 6. Formatea datos (fechas a serial Excel, booleanos, IDs como texto)
+ * 7. Escribe datos en Excel en UN SOLO BLOQUE (optimización)
+ * 8. Aplica formato visual (encabezados azules, formato de fecha, autoajuste)
+ * 9. Activa la hoja y muestra notificación de éxito
+ * 
+ * @async
+ * @param {string} [downloadType='cuentas'] - Tipo de datos: 'cuentas', 'flujos' o 'movimientos'
+ * @param {string} [recordLimit='50'] - Límite de registros: '50', '100', '500' o 'all'
+ * @param {Array<string>} [selectedFields=[]] - Campos seleccionados (solo para movimientos)
+ * 
+ * Optimizaciones implementadas:
+ * - suspendScreenUpdatingUntilNextSync() - Evita redibujado durante la operación
+ * - Escritura en bloques - Un solo sync en lugar de N syncs
+ * - Sistema de reintentos - 3 intentos en caso de fallo de red
+ * 
+ * @throws {Error} Si hay problemas de conexión, hoja protegida o formato de datos incorrecto
+ */
 export async function download(downloadType = 'cuentas', recordLimit = '50', selectedFields = []) {
   try {
     // Suspender actualización de pantalla para mejor rendimiento
@@ -420,7 +516,16 @@ export async function download(downloadType = 'cuentas', recordLimit = '50', sel
         console.log("Sheet1 no existe o ya fue eliminada");
       }
 
-      // Función auxiliar para formatear fechas
+      /**
+       * Formatea una fecha ISO a número serial de Excel
+       * 
+       * Excel almacena fechas como números seriales (días desde 30/12/1899)
+       * Ejemplo: "2025-11-12" → 45962
+       * 
+       * @param {string} dateString - Fecha en formato ISO (YYYY-MM-DDTHH:mm:ss)
+       * @param {string} fieldName - Nombre del campo (para logging)
+       * @returns {number|string} Número serial de Excel o string vacío si la fecha es inválida
+       */
       const formatDate = (dateString, fieldName) => {
         // Verificar si el valor es nulo, undefined o string vacío
         if (!dateString || dateString === '' || dateString === null || dateString === undefined) {
@@ -455,7 +560,20 @@ export async function download(downloadType = 'cuentas', recordLimit = '50', sel
         }
       };
 
-      // Función auxiliar para formatear valores según el tipo de campo
+      /**
+       * Formatea un valor según el tipo de campo
+       * 
+       * Transformaciones especiales:
+       * - @odata.etag: Se oculta (null)
+       * - Booleanos: true/false → "true"/"false" (strings)
+       * - Fechas: Se convierten a serial Excel
+       * - ID: Se prefija con apóstrofe para forzar formato texto
+       * - Otros: Se devuelven tal cual (null → '')
+       * 
+       * @param {string} fieldName - Nombre del campo
+       * @param {any} value - Valor a formatear
+       * @returns {any} Valor formateado según el tipo
+       */
       const formatValue = (fieldName, value) => {
         // No mostrar @odata.etag
         if (fieldName === '@odata.etag') return null;
@@ -506,7 +624,17 @@ export async function download(downloadType = 'cuentas', recordLimit = '50', sel
       const numRows = values.length + 1; // +1 para la fila de encabezados
       const numCols = headers.length;
       
-      // Generar la columna final (A, B, ..., Z, AA, AB, ...)
+      /**
+       * Convierte un índice numérico a letra de columna Excel
+       * 
+       * Sistema de base 26:
+       * 0 → A, 1 → B, ... 25 → Z
+       * 26 → AA, 27 → AB, ... 51 → AZ
+       * 52 → BA, etc.
+       * 
+       * @param {number} colIndex - Índice de columna (base 0)
+       * @returns {string} Letra de columna Excel
+       */
       const getColumnLetter = (colIndex) => {
         let letter = '';
         while (colIndex >= 0) {
@@ -572,6 +700,32 @@ export async function download(downloadType = 'cuentas', recordLimit = '50', sel
   }
 }
 
+/**
+ * 📤 FUNCIÓN DE EJEMPLO - Importa datos desde Excel a un servidor externo
+ * 
+ * NOTA: Esta función es solo un ejemplo educativo. Usa un servidor de prueba
+ * (jsonplaceholder.typicode.com) y no se utiliza en producción.
+ * 
+ * Flujo:
+ * 1. Lee datos del rango A1:B2 de la hoja activa
+ * 2. Valida que existan encabezados y datos
+ * 3. Envía los datos por POST al servidor de prueba
+ * 4. Crea una hoja "Resultado" con la respuesta del servidor
+ * 5. Muestra notificación de éxito
+ * 
+ * Validaciones:
+ * - Verifica que haya al menos 2 filas (encabezados + datos)
+ * - Valida que los encabezados no estén vacíos
+ * - Valida que haya al menos un dato
+ * 
+ * Características:
+ * - Sistema de reintentos (3 intentos)
+ * - Nombres de hoja únicos (Resultado, Resultado_1, Resultado_2, etc.)
+ * - Formato visual para la hoja de resultados
+ * 
+ * @async
+ * @throws {Error} Si no hay suficientes datos, faltan encabezados o hay problemas de conexión
+ */
 export async function importData() {
   try {
     console.log("Iniciando función importData");
