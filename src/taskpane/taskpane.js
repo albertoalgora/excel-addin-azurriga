@@ -106,8 +106,8 @@ export async function login() {
         const authString = btoa(username + ':' + password);
         console.log("Autenticación básica creada");
         
-        // Usar proxy local para evitar problemas de CORS y Mixed Content
-        const response = await fetch('/odata/', {
+        // URL completa del servidor OData
+        const response = await fetch('http://8cf33ac.online-server.cloud:1031/odata/', {
           method: 'GET',
           headers: {
             'Authorization': `Basic ${authString}`,
@@ -395,16 +395,17 @@ export async function download(downloadType = 'cuentas', recordLimit = '50', sel
       application.suspendScreenUpdatingUntilNextSync();
       
       // Construir la URL según el tipo de descarga
+      const BASE_URL = 'http://8cf33ac.online-server.cloud:1031/odata';
       let endpoint = '';
       switch(downloadType) {
         case 'cuentas':
-          endpoint = '/odata/AccountSet';
+          endpoint = `${BASE_URL}/AccountSet`;
           break;
         case 'flujos':
-          endpoint = '/odata/FlowCodeSet';
+          endpoint = `${BASE_URL}/FlowCodeSet`;
           break;
         case 'movimientos':
-          endpoint = '/odata/CashFlowSet';
+          endpoint = `${BASE_URL}/CashFlowSet`;
           // Construir la URL completa con $select, $expand y $filter
           const params = [];
           
