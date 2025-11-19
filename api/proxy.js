@@ -41,10 +41,14 @@ export default async function handler(req, res) {
             headers['Authorization'] = req.headers.authorization;
         }
 
-        // Preparar opciones para fetch
+        // Preparar opciones para fetch con timeout
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 8000); // 8 segundos timeout
+        
         const fetchOptions = {
             method: req.method,
-            headers: headers
+            headers: headers,
+            signal: controller.signal
         };
 
         // Agregar body si existe (POST, PUT)
@@ -53,7 +57,32 @@ export default async function handler(req, res) {
         }
 
         // Hacer la petición al servidor OData
-        const response = await fetch(targetUrl, fetchOptions);
+        let response;
+        try {
+            response = await fetch(targetUrl, fetchOptions);
+            clearTimeout(timeout);
+        } catch (fetchError) {
+            clearTimeout(timeout);
+            console.error('[Proxy] Fetch error:', fetchError.message);
+            
+            // Asegurar CORS headers en error
+            res.setHeader('Access-Control-Allow-Origin', '*');
+            res.setHeader('Access-Control-Allow-Credentials', 'true');
+            
+            if (fetchError.name === 'AbortError') {
+                return res.status(504).json({
+                    error: 'Timeout conectando al servidor OData',
+                    details: 'El servidor no respondió en 8 segundos',
+                    targetUrl: targetUrl
+                });
+            }
+            
+            return res.status(502).json({
+                error: 'Error de conexión con el servidor OData',
+                details: fetchError.message,
+                targetUrl: targetUrl
+            });
+        }
         
         // Obtener el contenido de la respuesta
         const contentType = response.headers.get('content-type');
@@ -72,6 +101,10 @@ export default async function handler(req, res) {
 
     } catch (error) {
         console.error('[Vercel Proxy] Error:', error);
+        
+        // Asegurar CORS headers en error
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        res.setHeader('Access-Control-Allow-Credentials', 'true');
         
         // Devolver error con CORS
         return res.status(500).json({
