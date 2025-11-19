@@ -1,0 +1,16 @@
+{
+  "name": "odata-proxy",
+  "version": "1.0.0",
+  "description": "Azure Function proxy para servidor OData HTTP",
+  "main": "index.js",
+  "scripts": {
+    "start": "func start",
+    "test": "echo \"No tests specified\""
+  },
+  "dependencies": {
+    "node-fetch": "^2.6.7"
+  },
+  "devDependencies": {
+    "@azure/functions": "^3.5.0"
+  }
+}
