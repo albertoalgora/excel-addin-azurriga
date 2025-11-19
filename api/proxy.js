@@ -6,16 +6,23 @@
  */
 
 export default async function handler(req, res) {
-    // Configurar CORS para permitir peticiones desde GitHub Pages y Excel Online
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+    // Configurar CORS - DEBE estar al inicio antes de cualquier respuesta
+    const corsHeaders = {
+        'Access-Control-Allow-Credentials': 'true',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With, Accept',
+        'Access-Control-Max-Age': '86400'
+    };
+
+    // Aplicar todos los headers CORS
+    Object.keys(corsHeaders).forEach(key => {
+        res.setHeader(key, corsHeaders[key]);
+    });
     
     // Manejar preflight OPTIONS
     if (req.method === 'OPTIONS') {
-        res.status(200).end();
-        return;
+        return res.status(200).end();
     }
 
     try {
@@ -64,13 +71,14 @@ export default async function handler(req, res) {
 
         console.log(`[Vercel Proxy] Response: ${response.status}`);
 
-        // Devolver la respuesta
-        res.status(response.status).json(data);
+        // Devolver la respuesta con CORS
+        return res.status(response.status).json(data);
 
     } catch (error) {
         console.error('[Vercel Proxy] Error:', error);
         
-        res.status(500).json({
+        // Devolver error con CORS
+        return res.status(500).json({
             error: 'Error al conectar con el servidor OData',
             details: error.message,
             timestamp: new Date().toISOString()
