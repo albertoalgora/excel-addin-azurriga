@@ -106,8 +106,8 @@ export async function login() {
         const authString = btoa(username + ':' + password);
         console.log("Autenticación básica creada");
         
-        // URL completa del servidor OData
-        const response = await fetch('http://8cf33ac.online-server.cloud:1031/odata/', {
+        // Proxy HTTPS de Vercel para evitar Mixed Content
+        const response = await fetch('https://excel-addin-azurriga.vercel.app/api/proxy?path=odata/', {
           method: 'GET',
           headers: {
             'Authorization': `Basic ${authString}`,
@@ -394,18 +394,18 @@ export async function download(downloadType = 'cuentas', recordLimit = '50', sel
       const application = context.workbook.application;
       application.suspendScreenUpdatingUntilNextSync();
       
-      // Construir la URL según el tipo de descarga
-      const BASE_URL = 'http://8cf33ac.online-server.cloud:1031/odata';
+      // Proxy HTTPS de Vercel (evita Mixed Content en Excel Online)
+      const VERCEL_PROXY = 'https://excel-addin-azurriga.vercel.app/api/proxy?path=';
       let endpoint = '';
       switch(downloadType) {
         case 'cuentas':
-          endpoint = `${BASE_URL}/AccountSet`;
+          endpoint = `${VERCEL_PROXY}odata/AccountSet`;
           break;
         case 'flujos':
-          endpoint = `${BASE_URL}/FlowCodeSet`;
+          endpoint = `${VERCEL_PROXY}odata/FlowCodeSet`;
           break;
         case 'movimientos':
-          endpoint = `${BASE_URL}/CashFlowSet`;
+          endpoint = `${VERCEL_PROXY}odata/CashFlowSet`;
           // Construir la URL completa con $select, $expand y $filter
           const params = [];
           
@@ -426,16 +426,16 @@ export async function download(downloadType = 'cuentas', recordLimit = '50', sel
           // Agregar $filter solo con Status
           params.push("$filter=Status eq 'Actual'");
           
-          // Unir todos los parámetros
+          // Unir todos los parámetros (codificar para URL)
           if (params.length > 0) {
-            endpoint += '?' + params.join('&');
+            endpoint += '%3F' + params.join('%26'); // %3F = ?, %26 = &
           }
           break;
       }
       
       // Agregar límite de registros para Cuentas y Flujos
       if (downloadType !== 'movimientos' && recordLimit !== 'all') {
-        endpoint += (endpoint.includes('?') ? '&' : '?') + `$top=${recordLimit}`;
+        endpoint += (endpoint.includes('%3F') ? '%26' : '%3F') + `$top=${recordLimit}`;
       }
       
       console.log("Descargando desde:", endpoint);
