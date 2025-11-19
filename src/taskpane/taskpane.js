@@ -106,8 +106,20 @@ export async function login() {
         const authString = btoa(username + ':' + password);
         console.log("Autenticación básica creada");
         
-        // Proxy HTTPS de Vercel para evitar Mixed Content
-        const response = await fetch('https://excel-addin-azurriga.vercel.app/api/proxy?path=odata/', {
+        // Detectar si estamos en Excel Desktop o Excel Online
+        const isDesktop = Office.context.platform === Office.PlatformType.PC || 
+                          Office.context.platform === Office.PlatformType.Mac ||
+                          Office.context.platform === Office.PlatformType.OfficeOnline === false;
+        
+        // Excel Desktop puede usar HTTP directo (no tiene restricción Mixed Content)
+        // Excel Online necesita el proxy HTTPS de Vercel
+        const baseUrl = isDesktop 
+          ? 'http://8cf33ac.online-server.cloud:1031/odata/' 
+          : 'https://excel-addin-azurriga.vercel.app/api/proxy?path=odata/';
+        
+        console.log(`Usando ${isDesktop ? 'conexión directa' : 'proxy Vercel'} para ${Office.context.platform}`);
+        
+        const response = await fetch(baseUrl, {
           method: 'GET',
           headers: {
             'Authorization': `Basic ${authString}`,
@@ -394,18 +406,29 @@ export async function download(downloadType = 'cuentas', recordLimit = '50', sel
       const application = context.workbook.application;
       application.suspendScreenUpdatingUntilNextSync();
       
-      // Proxy HTTPS de Vercel (evita Mixed Content en Excel Online)
-      const VERCEL_PROXY = 'https://excel-addin-azurriga.vercel.app/api/proxy?path=';
+      // Detectar si estamos en Excel Desktop o Excel Online
+      const isDesktop = Office.context.platform === Office.PlatformType.PC || 
+                        Office.context.platform === Office.PlatformType.Mac ||
+                        Office.context.platform === Office.PlatformType.OfficeOnline === false;
+      
+      // Excel Desktop: HTTP directo (sin restricción Mixed Content)
+      // Excel Online: Proxy HTTPS de Vercel
+      const BASE_URL = isDesktop 
+        ? 'http://8cf33ac.online-server.cloud:1031/odata/' 
+        : 'https://excel-addin-azurriga.vercel.app/api/proxy?path=odata/';
+      
+      console.log(`Download usando ${isDesktop ? 'conexión directa' : 'proxy Vercel'}`);
+      
       let endpoint = '';
       switch(downloadType) {
         case 'cuentas':
-          endpoint = `${VERCEL_PROXY}odata/AccountSet`;
+          endpoint = `${BASE_URL}AccountSet`;
           break;
         case 'flujos':
-          endpoint = `${VERCEL_PROXY}odata/FlowCodeSet`;
+          endpoint = `${BASE_URL}FlowCodeSet`;
           break;
         case 'movimientos':
-          endpoint = `${VERCEL_PROXY}odata/CashFlowSet`;
+          endpoint = `${BASE_URL}CashFlowSet`;
           // Construir la URL completa con $select, $expand y $filter
           const params = [];
           
@@ -426,16 +449,22 @@ export async function download(downloadType = 'cuentas', recordLimit = '50', sel
           // Agregar $filter solo con Status
           params.push("$filter=Status eq 'Actual'");
           
-          // Unir todos los parámetros (codificar para URL)
+          // Unir todos los parámetros
           if (params.length > 0) {
-            endpoint += '%3F' + params.join('%26'); // %3F = ?, %26 = &
+            // Si usamos proxy de Vercel, codificar ? y & como %3F y %26
+            // Si es conexión directa, usar ? y & normales
+            const separator = isDesktop ? '?' : '%3F';
+            const joiner = isDesktop ? '&' : '%26';
+            endpoint += separator + params.join(joiner);
           }
           break;
       }
       
       // Agregar límite de registros para Cuentas y Flujos
       if (downloadType !== 'movimientos' && recordLimit !== 'all') {
-        endpoint += (endpoint.includes('%3F') ? '%26' : '%3F') + `$top=${recordLimit}`;
+        const hasParams = endpoint.includes('?') || endpoint.includes('%3F');
+        const separator = isDesktop ? (hasParams ? '&' : '?') : (hasParams ? '%26' : '%3F');
+        endpoint += separator + `$top=${recordLimit}`;
       }
       
       console.log("Descargando desde:", endpoint);
