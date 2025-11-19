@@ -10,8 +10,7 @@
   <HighResolutionIconUrl DefaultValue="https://localhost:3000/assets/icon-64.png"/>
   <SupportUrl DefaultValue="https://albertoalgora.github.io/excel-addin-azurriga/support.html"/>
   <AppDomains>
-    <AppDomain>https://www.contoso.com</AppDomain>
-    <AppDomain>http://8cf33ac.online-server.cloud:1031</AppDomain>
+    <AppDomain>https://albertoalgora.github.io</AppDomain>
   </AppDomains>
   <Hosts>
     <Host Name="Workbook"/>
