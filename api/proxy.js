@@ -3,26 +3,22 @@
  * Resuelve el problema de Mixed Content en Excel Online
  * 
  * URL: https://tu-proyecto.vercel.app/api/proxy?path=odata/AccountSet
+ * Version: 2.0 - CORS Fixed
  */
 
 export default async function handler(req, res) {
-    // Configurar CORS - DEBE estar al inicio antes de cualquier respuesta
-    const corsHeaders = {
-        'Access-Control-Allow-Credentials': 'true',
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With, Accept',
-        'Access-Control-Max-Age': '86400'
-    };
-
-    // Aplicar todos los headers CORS
-    Object.keys(corsHeaders).forEach(key => {
-        res.setHeader(key, corsHeaders[key]);
-    });
+    // CORS HEADERS - Primero antes que nada
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Authorization, Accept');
+    
+    console.log(`[Proxy] ${req.method} ${req.url} from ${req.headers.origin || 'no-origin'}`);
     
     // Manejar preflight OPTIONS
     if (req.method === 'OPTIONS') {
-        return res.status(200).end();
+        console.log('[Proxy] Handling OPTIONS preflight');
+        return res.status(204).end();
     }
 
     try {
