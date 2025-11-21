@@ -106,18 +106,10 @@ export async function login() {
         const authString = btoa(username + ':' + password);
         console.log("Autenticación básica creada");
         
-        // Detectar si estamos en Excel Desktop o Excel Online
-        const isDesktop = Office.context.platform === Office.PlatformType.PC || 
-                          Office.context.platform === Office.PlatformType.Mac ||
-                          Office.context.platform === Office.PlatformType.OfficeOnline === false;
+        // Usar siempre proxy HTTPS de Vercel (Excel Desktop ahora también bloquea Mixed Content)
+        const baseUrl = 'https://excel-addin-azurriga.vercel.app/api/proxy?path=odata/';
         
-        // Excel Desktop puede usar HTTP directo (no tiene restricción Mixed Content)
-        // Excel Online necesita el proxy HTTPS de Vercel
-        const baseUrl = isDesktop 
-          ? 'http://8cf33ac.online-server.cloud:1031/odata/' 
-          : 'https://excel-addin-azurriga.vercel.app/api/proxy?path=odata/';
-        
-        console.log(`Usando ${isDesktop ? 'conexión directa' : 'proxy Vercel'} para ${Office.context.platform}`);
+        console.log("Usando proxy HTTPS de Vercel");
         
         const response = await fetch(baseUrl, {
           method: 'GET',
@@ -406,29 +398,21 @@ export async function download(downloadType = 'cuentas', recordLimit = '50', sel
       const application = context.workbook.application;
       application.suspendScreenUpdatingUntilNextSync();
       
-      // Detectar si estamos en Excel Desktop o Excel Online
-      const isDesktop = Office.context.platform === Office.PlatformType.PC || 
-                        Office.context.platform === Office.PlatformType.Mac ||
-                        Office.context.platform === Office.PlatformType.OfficeOnline === false;
+      // Usar siempre proxy HTTPS de Vercel (Excel Desktop también bloquea Mixed Content ahora)
+      const VERCEL_PROXY = 'https://excel-addin-azurriga.vercel.app/api/proxy?path=odata/';
       
-      // Excel Desktop: HTTP directo (sin restricción Mixed Content)
-      // Excel Online: Proxy HTTPS de Vercel
-      const BASE_URL = isDesktop 
-        ? 'http://8cf33ac.online-server.cloud:1031/odata/' 
-        : 'https://excel-addin-azurriga.vercel.app/api/proxy?path=odata/';
-      
-      console.log(`Download usando ${isDesktop ? 'conexión directa' : 'proxy Vercel'}`);
+      console.log("Download usando proxy HTTPS de Vercel");
       
       let endpoint = '';
       switch(downloadType) {
         case 'cuentas':
-          endpoint = `${BASE_URL}AccountSet`;
+          endpoint = `${VERCEL_PROXY}AccountSet`;
           break;
         case 'flujos':
-          endpoint = `${BASE_URL}FlowCodeSet`;
+          endpoint = `${VERCEL_PROXY}FlowCodeSet`;
           break;
         case 'movimientos':
-          endpoint = `${BASE_URL}CashFlowSet`;
+          endpoint = `${VERCEL_PROXY}CashFlowSet`;
           // Construir la URL completa con $select, $expand y $filter
           const params = [];
           
@@ -449,21 +433,16 @@ export async function download(downloadType = 'cuentas', recordLimit = '50', sel
           // Agregar $filter solo con Status
           params.push("$filter=Status eq 'Actual'");
           
-          // Unir todos los parámetros
+          // Unir todos los parámetros (siempre codificados para proxy Vercel)
           if (params.length > 0) {
-            // Si usamos proxy de Vercel, codificar ? y & como %3F y %26
-            // Si es conexión directa, usar ? y & normales
-            const separator = isDesktop ? '?' : '%3F';
-            const joiner = isDesktop ? '&' : '%26';
-            endpoint += separator + params.join(joiner);
+            endpoint += '%3F' + params.join('%26'); // %3F = ?, %26 = &
           }
           break;
       }
       
       // Agregar límite de registros para Cuentas y Flujos
       if (downloadType !== 'movimientos' && recordLimit !== 'all') {
-        const hasParams = endpoint.includes('?') || endpoint.includes('%3F');
-        const separator = isDesktop ? (hasParams ? '&' : '?') : (hasParams ? '%26' : '%3F');
+        const separator = endpoint.includes('%3F') ? '%26' : '%3F';
         endpoint += separator + `$top=${recordLimit}`;
       }
       
