@@ -6,6 +6,13 @@
  * - username (opcional): Filtrar por usuario específico
  * - limit (opcional): Número de registros (default: 100, max: 1000)
  * - type (opcional): 'detailed' | 'summary' (default: 'summary')
+ * 
+ * Respuesta summary incluye:
+ * - totalRequests: Total de peticiones
+ * - uniqueUsers: Usuarios únicos
+ * - byTipoPeticion: Peticiones agrupadas por tipo (Login, Descarga Cuentas, etc.)
+ * - byStatusCode: Peticiones agrupadas por código de estado
+ * - byUser: Peticiones agrupadas por usuario
  */
 
 import { getStats, getAggregatedStats } from './db.js';

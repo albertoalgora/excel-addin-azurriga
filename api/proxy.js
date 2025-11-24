@@ -144,9 +144,49 @@ export default async function handler(req, res) {
 }
 
 /**
+ * Mapea el endpoint a un tipo de petición descriptivo
+ */
+function mapEndpointToTipoPeticion(path) {
+    if (!path || path === '' || path === 'odata/' || path === 'odata') {
+        return 'Login';
+    }
+    if (path.includes('AccountSet')) {
+        return 'Descarga Cuentas';
+    }
+    if (path.includes('FlowCodeSet')) {
+        return 'Descarga Flujos';
+    }
+    if (path.includes('CashFlowSet')) {
+        return 'Descarga Movimientos';
+    }
+    // Otros endpoints específicos
+    return 'Otro: ' + path;
+}
+
+/**
+ * Extrae el número de registros solicitados desde el path
+ * Busca el parámetro $top en la URL
+ */
+function extractNumeroRegistros(path, tipoPeticion) {
+    // Para login, siempre es 1
+    if (tipoPeticion === 'Login') {
+        return 1;
+    }
+    
+    // Buscar $top en el path (puede estar codificado como %24top)
+    const topMatch = path.match(/[\?&](?:\$|%24)top=(\d+)/i);
+    if (topMatch) {
+        return parseInt(topMatch[1], 10);
+    }
+    
+    // Si no hay $top, se devuelve null (significa "todos")
+    return null;
+}
+
+/**
  * Función auxiliar para guardar logs sin bloquear la respuesta
  */
-function saveLog(req, endpoint, statusCode, responseTime, errorMessage) {
+function saveLog(req, path, statusCode, responseTime, errorMessage) {
     // Extraer username del header de Authorization (Basic Auth)
     let username = 'anonymous';
     try {
@@ -160,15 +200,22 @@ function saveLog(req, endpoint, statusCode, responseTime, errorMessage) {
         console.error('[Proxy] Error extrayendo username:', e.message);
     }
     
+    // Mapear endpoint a tipo de petición
+    const tipoPeticion = mapEndpointToTipoPeticion(path);
+    
+    // Extraer número de registros
+    const numeroRegistros = extractNumeroRegistros(path, tipoPeticion);
+    
     // Guardar log (async, no esperar resultado)
     logRequest({
         username,
-        endpoint,
+        tipoPeticion,
         method: req.method,
         statusCode,
         responseTime,
         userAgent: req.headers['user-agent'] || '',
-        errorMessage
+        errorMessage,
+        numeroRegistros
     }).catch(err => {
         console.error('[Proxy] Error guardando log:', err.message);
     });

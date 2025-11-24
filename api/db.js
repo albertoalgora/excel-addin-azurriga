@@ -27,7 +27,7 @@ export function getDbClient() {
 }
 
 /**
- * Registra una petición OData en la base de datos
+ * Registra una petición en la base de datos
  * @param {Object} data - Datos de la petición
  */
 export async function logRequest(data) {
@@ -38,23 +38,25 @@ export async function logRequest(data) {
       return;
     }
     
-    const { username, endpoint, method, statusCode, responseTime, userAgent, errorMessage } = data;
+    const { username, tipoPeticion, method, statusCode, responseTime, userAgent, errorMessage, numeroRegistros } = data;
     
     await db.execute({
-      sql: `INSERT INTO odata_logs (username, endpoint, method, status_code, response_time_ms, user_agent, error_message) 
-            VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      sql: `INSERT INTO odata_logs (username, tipo_peticion, method, status_code, response_time_ms, user_agent, error_message, numero_registros) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       args: [
         username || 'anonymous',
-        endpoint || '',
+        tipoPeticion || '',
         method || 'GET',
         statusCode || 0,
         responseTime || 0,
         userAgent || '',
-        errorMessage || null
+        errorMessage || null,
+        numeroRegistros || null
       ]
     });
     
-    console.log(`[DB] Log guardado: ${method} ${endpoint} - ${statusCode} (${responseTime}ms)`);
+    const registrosInfo = numeroRegistros ? ` [${numeroRegistros} registros]` : '';
+    console.log(`[DB] Log guardado: ${method} ${tipoPeticion}${registrosInfo} - ${statusCode} (${responseTime}ms)`);
   } catch (error) {
     // No fallar si el logging falla
     console.error('[DB] Error al guardar log:', error.message);
@@ -106,16 +108,16 @@ export async function getAggregatedStats(username = null) {
     const queries = [
       // Total de peticiones
       `SELECT COUNT(*) as total FROM odata_logs ${whereClause}`,
-      // Peticiones por endpoint
-      `SELECT endpoint, COUNT(*) as count FROM odata_logs ${whereClause} GROUP BY endpoint ORDER BY count DESC LIMIT 10`,
+      // Peticiones por tipo
+      `SELECT tipo_peticion, COUNT(*) as count FROM odata_logs ${whereClause} GROUP BY tipo_peticion ORDER BY count DESC LIMIT 10`,
       // Peticiones por usuario (solo si no se especifica username)
       username ? null : `SELECT username, COUNT(*) as count FROM odata_logs GROUP BY username ORDER BY count DESC LIMIT 10`,
       // Tiempo de respuesta promedio
       `SELECT AVG(response_time_ms) as avg_response_time FROM odata_logs ${whereClause}`,
       // Errores (status code >= 400)
-      `SELECT COUNT(*) as errors FROM odata_logs ${whereClause} AND status_code >= 400`,
+      `SELECT COUNT(*) as errors FROM odata_logs ${whereClause ? whereClause + ' AND' : 'WHERE'} status_code >= 400`,
       // Peticiones en las últimas 24 horas
-      `SELECT COUNT(*) as last_24h FROM odata_logs ${whereClause} AND timestamp >= datetime('now', '-1 day')`
+      `SELECT COUNT(*) as last_24h FROM odata_logs ${whereClause ? whereClause + ' AND' : 'WHERE'} timestamp >= datetime('now', '-1 day')`
     ].filter(q => q !== null);
     
     const results = await Promise.all(
@@ -124,7 +126,7 @@ export async function getAggregatedStats(username = null) {
     
     return {
       total: results[0].rows[0].total,
-      byEndpoint: results[1].rows,
+      byTipoPeticion: results[1].rows,
       byUser: username ? null : results[2].rows,
       avgResponseTime: Math.round(results[username ? 2 : 3].rows[0].avg_response_time || 0),
       errors: results[username ? 3 : 4].rows[0].errors,

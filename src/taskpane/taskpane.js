@@ -106,10 +106,14 @@ export async function login() {
         const authString = btoa(username + ':' + password);
         console.log("Autenticación básica creada");
         
-        // Usar siempre proxy HTTPS de Vercel (Excel Desktop ahora también bloquea Mixed Content)
-        const baseUrl = 'https://excel-addin-azurriga.vercel.app/api/proxy?path=odata/';
+        // DESARROLLO: Usar proxy local (http://localhost:3002)
+        // PRODUCCIÓN: Usar proxy Vercel (https://excel-addin-azurriga.vercel.app)
+        const isDevelopment = window.location.hostname === 'localhost';
+        const baseUrl = isDevelopment 
+          ? 'http://localhost:3002/api/proxy?path=odata/'
+          : 'https://excel-addin-azurriga.vercel.app/api/proxy?path=odata/';
         
-        console.log("Usando proxy HTTPS de Vercel");
+        console.log(`Usando proxy ${isDevelopment ? 'LOCAL' : 'VERCEL'}: ${baseUrl}`);
         
         const response = await fetch(baseUrl, {
           method: 'GET',
@@ -398,10 +402,14 @@ export async function download(downloadType = 'cuentas', recordLimit = '50', sel
       const application = context.workbook.application;
       application.suspendScreenUpdatingUntilNextSync();
       
-      // Usar siempre proxy HTTPS de Vercel (Excel Desktop también bloquea Mixed Content ahora)
-      const VERCEL_PROXY = 'https://excel-addin-azurriga.vercel.app/api/proxy?path=odata/';
+      // DESARROLLO: Usar proxy local (http://localhost:3002)
+      // PRODUCCIÓN: Usar proxy Vercel (https://excel-addin-azurriga.vercel.app)
+      const isDevelopment = window.location.hostname === 'localhost';
+      const VERCEL_PROXY = isDevelopment
+        ? 'http://localhost:3002/api/proxy?path=odata/'
+        : 'https://excel-addin-azurriga.vercel.app/api/proxy?path=odata/';
       
-      console.log("Download usando proxy HTTPS de Vercel");
+      console.log(`Download usando proxy ${isDevelopment ? 'LOCAL' : 'VERCEL'}`);
       
       let endpoint = '';
       switch(downloadType) {

@@ -28,6 +28,10 @@
   "dependencies": {
     "@libsql/client": "^0.15.15",
     "core-js": "^3.36.0",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0",
+    "node-fetch": "^3.3.2",
     "regenerator-runtime": "^0.14.1"
   },
   "devDependencies": {
