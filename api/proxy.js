@@ -118,7 +118,7 @@ export default async function handler(req, res) {
 
         // Guardar log de la petición exitosa (async, no bloquea respuesta)
         const responseTime = Date.now() - startTime;
-        saveLog(req, path, statusCode, responseTime, null);
+        saveLog(req, path, statusCode, responseTime, null, data);
 
         // Devolver la respuesta con CORS
         return res.status(response.status).json(data);
@@ -164,29 +164,49 @@ function mapEndpointToTipoPeticion(path) {
 }
 
 /**
- * Extrae el número de registros solicitados desde el path
- * Busca el parámetro $top en la URL
+ * Extrae el número de registros reales de la respuesta del API
+ * Cuenta los elementos en el array de resultados
  */
-function extractNumeroRegistros(path, tipoPeticion) {
+function extractNumeroRegistros(tipoPeticion, responseData) {
     // Para login, siempre es 1
     if (tipoPeticion === 'Login') {
         return 1;
     }
     
-    // Buscar $top en el path (puede estar codificado como %24top)
-    const topMatch = path.match(/[\?&](?:\$|%24)top=(\d+)/i);
-    if (topMatch) {
-        return parseInt(topMatch[1], 10);
+    // Intentar contar registros en la respuesta
+    try {
+        // Estructura OData v4: { "@odata.context": "...", "value": [...] }
+        if (responseData && Array.isArray(responseData.value)) {
+            return responseData.value.length;
+        }
+        
+        // Estructura OData v2: { d: { results: [...] } }
+        if (responseData && responseData.d && Array.isArray(responseData.d.results)) {
+            return responseData.d.results.length;
+        }
+        
+        // Estructura alternativa: { results: [...] }
+        if (responseData && Array.isArray(responseData.results)) {
+            return responseData.results.length;
+        }
+        
+        // Si es un array directamente
+        if (Array.isArray(responseData)) {
+            return responseData.length;
+        }
+        
+        // Si no podemos determinar, null significa "no aplica"
+        return null;
+    } catch (e) {
+        console.error('[Proxy] Error contando registros:', e.message);
+        return null;
     }
-    
-    // Si no hay $top, se devuelve null (significa "todos")
-    return null;
 }
 
 /**
  * Función auxiliar para guardar logs sin bloquear la respuesta
  */
-function saveLog(req, path, statusCode, responseTime, errorMessage) {
+function saveLog(req, path, statusCode, responseTime, errorMessage, responseData = null) {
     // Extraer username del header de Authorization (Basic Auth)
     let username = 'anonymous';
     try {
@@ -203,8 +223,8 @@ function saveLog(req, path, statusCode, responseTime, errorMessage) {
     // Mapear endpoint a tipo de petición
     const tipoPeticion = mapEndpointToTipoPeticion(path);
     
-    // Extraer número de registros
-    const numeroRegistros = extractNumeroRegistros(path, tipoPeticion);
+    // Extraer número de registros de la respuesta real
+    const numeroRegistros = extractNumeroRegistros(tipoPeticion, responseData);
     
     // Guardar log (async, no esperar resultado)
     logRequest({

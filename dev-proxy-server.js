@@ -109,7 +109,7 @@ app.all('/api/proxy', async (req, res) => {
     
     // Guardar log exitoso
     const responseTime = Date.now() - startTime;
-    saveLog(req, path, statusCode, responseTime, null);
+    saveLog(req, path, statusCode, responseTime, null, data);
     
     return res.status(statusCode).json(data);
     
@@ -182,27 +182,65 @@ function mapEndpointToTipoPeticion(path) {
 }
 
 /**
- * Extrae el número de registros solicitados desde el path
- * Busca el parámetro $top en la URL
+ * Extrae el número de registros reales de la respuesta del API
+ * Cuenta los elementos en el array de resultados
  */
-function extractNumeroRegistros(path, tipoPeticion) {
+function extractNumeroRegistros(tipoPeticion, responseData) {
   // Para login, siempre es 1
   if (tipoPeticion === 'Login') {
     return 1;
   }
   
-  // Buscar $top en el path (puede estar codificado como %24top)
-  const topMatch = path.match(/[\?&](?:\$|%24)top=(\d+)/i);
-  if (topMatch) {
-    return parseInt(topMatch[1], 10);
+  // Intentar contar registros en la respuesta
+  try {
+    console.log('[Proxy] Extrayendo numero_registros...');
+    console.log('[Proxy] Tipo de responseData:', typeof responseData);
+    console.log('[Proxy] Tiene propiedad d?', responseData && 'd' in responseData);
+    
+    // Estructura OData v4: { "@odata.context": "...", "value": [...] }
+    if (responseData && Array.isArray(responseData.value)) {
+      const count = responseData.value.length;
+      console.log(`[Proxy] ✅ Encontrados ${count} registros en responseData.value`);
+      return count;
+    }
+    
+    // Estructura OData v2: { d: { results: [...] } }
+    if (responseData && responseData.d && Array.isArray(responseData.d.results)) {
+      const count = responseData.d.results.length;
+      console.log(`[Proxy] ✅ Encontrados ${count} registros en responseData.d.results`);
+      return count;
+    }
+    
+    // Estructura alternativa: { results: [...] }
+    if (responseData && Array.isArray(responseData.results)) {
+      const count = responseData.results.length;
+      console.log(`[Proxy] ✅ Encontrados ${count} registros en responseData.results`);
+      return count;
+    }
+    
+    // Si es un array directamente
+    if (Array.isArray(responseData)) {
+      const count = responseData.length;
+      console.log(`[Proxy] ✅ Encontrados ${count} registros (array directo)`);
+      return count;
+    }
+    
+    // Debug: mostrar las keys si es un objeto
+    if (responseData && typeof responseData === 'object') {
+      console.log('[Proxy] Keys del objeto:', Object.keys(responseData));
+    }
+    
+    // Si no podemos determinar, null significa "no aplica"
+    console.log('[Proxy] ⚠️ No se pudo determinar numero_registros');
+    return null;
+  } catch (e) {
+    console.error('[Proxy] Error contando registros:', e.message);
+    return null;
   }
-  
-  // Si no hay $top, se devuelve null (significa "todos")
-  return null;
 }
 
 // Función auxiliar para guardar logs
-function saveLog(req, path, statusCode, responseTime, errorMessage) {
+function saveLog(req, path, statusCode, responseTime, errorMessage, responseData = null) {
   let username = 'anonymous';
   try {
     const authHeader = req.headers.authorization || '';
@@ -218,8 +256,8 @@ function saveLog(req, path, statusCode, responseTime, errorMessage) {
   // Mapear endpoint a tipo de petición
   const tipoPeticion = mapEndpointToTipoPeticion(path);
   
-  // Extraer número de registros
-  const numeroRegistros = extractNumeroRegistros(path, tipoPeticion);
+  // Extraer número de registros de la respuesta real
+  const numeroRegistros = extractNumeroRegistros(tipoPeticion, responseData);
   
   logRequest({
     username,
