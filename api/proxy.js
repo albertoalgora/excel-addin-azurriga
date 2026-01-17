@@ -29,7 +29,8 @@ export default async function handler(req, res) {
         const { path = '' } = req.query;
         
         // URL del servidor OData original (HTTP)
-        const targetUrl = `http://8cf33ac.online-server.cloud:1031/${path}`;
+        // const targetUrl = `http://8cf33ac.online-server.cloud:1031/${path}`;
+        const targetUrl = `https://azprod.azurriga.com:1035/${path}`;
         
         console.log(`[Vercel Proxy] ${req.method} ${targetUrl}`);
 

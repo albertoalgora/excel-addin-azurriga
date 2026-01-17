@@ -97,10 +97,24 @@ module.exports = async (env, options) => {
       proxy: [
         {
           context: ['/odata'],
-          target: 'http://8cf33ac.online-server.cloud:1031',
+          // target: 'http://8cf33ac.online-server.cloud:1031',
+          target: 'https://azprod.azurriga.com:1035',
           secure: false,
           changeOrigin: true,
-          logLevel: 'debug'
+          logLevel: 'debug',
+          pathRewrite: {
+            '^/odata': '/odata'
+          },
+          onProxyReq: (proxyReq, req, res) => {
+            // Reenviar el header de Authorization
+            if (req.headers.authorization) {
+              proxyReq.setHeader('Authorization', req.headers.authorization);
+              console.log('[Proxy] Authorization header forwarded:', req.headers.authorization.substring(0, 20) + '...');
+            }
+          },
+          onProxyRes: (proxyRes, req, res) => {
+            console.log('[Proxy] Response status:', proxyRes.statusCode, 'for', req.url);
+          }
         }
       ]
     },

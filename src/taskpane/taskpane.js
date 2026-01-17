@@ -106,14 +106,14 @@ export async function login() {
         const authString = btoa(username + ':' + password);
         console.log("Autenticación básica creada");
         
-        // DESARROLLO: Usar proxy local (http://localhost:3002)
+        // DESARROLLO: Usar proxy de webpack (/odata)
         // PRODUCCIÓN: Usar proxy Vercel (https://excel-addin-azurriga.vercel.app)
         const isDevelopment = window.location.hostname === 'localhost';
         const baseUrl = isDevelopment 
-          ? 'http://localhost:3002/api/proxy?path=odata/'
-          : 'https://excel-addin-azurriga.vercel.app/api/proxy?path=odata/';
+          ? '/odata/AccountSet?$top=1'
+          : 'https://excel-addin-azurriga.vercel.app/api/proxy?path=odata/AccountSet?$top=1';
         
-        console.log(`Usando proxy ${isDevelopment ? 'LOCAL' : 'VERCEL'}: ${baseUrl}`);
+        console.log(`Usando proxy ${isDevelopment ? 'WEBPACK' : 'VERCEL'}: ${baseUrl}`);
         
         const response = await fetch(baseUrl, {
           method: 'GET',
@@ -402,14 +402,14 @@ export async function download(downloadType = 'cuentas', recordLimit = '50', sel
       const application = context.workbook.application;
       application.suspendScreenUpdatingUntilNextSync();
       
-      // DESARROLLO: Usar proxy local (http://localhost:3002)
+      // DESARROLLO: Usar proxy de webpack (/odata)
       // PRODUCCIÓN: Usar proxy Vercel (https://excel-addin-azurriga.vercel.app)
       const isDevelopment = window.location.hostname === 'localhost';
       const VERCEL_PROXY = isDevelopment
-        ? 'http://localhost:3002/api/proxy?path=odata/'
+        ? '/odata/'
         : 'https://excel-addin-azurriga.vercel.app/api/proxy?path=odata/';
       
-      console.log(`Download usando proxy ${isDevelopment ? 'LOCAL' : 'VERCEL'}`);
+      console.log(`Download usando proxy ${isDevelopment ? 'WEBPACK' : 'VERCEL'}`);
       
       let endpoint = '';
       switch(downloadType) {
@@ -441,16 +441,23 @@ export async function download(downloadType = 'cuentas', recordLimit = '50', sel
           // Agregar $filter solo con Status
           params.push("$filter=Status eq 'Actual'");
           
-          // Unir todos los parámetros (siempre codificados para proxy Vercel)
+          // Unir todos los parámetros
+          // En desarrollo (webpack): usar ? y & normales
+          // En producción (Vercel): codificar como %3F y %26
           if (params.length > 0) {
-            endpoint += '%3F' + params.join('%26'); // %3F = ?, %26 = &
+            const questionMark = isDevelopment ? '?' : '%3F';
+            const ampersand = isDevelopment ? '&' : '%26';
+            endpoint += questionMark + params.join(ampersand);
           }
           break;
       }
       
       // Agregar límite de registros para Cuentas y Flujos
       if (downloadType !== 'movimientos' && recordLimit !== 'all') {
-        const separator = endpoint.includes('%3F') ? '%26' : '%3F';
+        const hasParams = isDevelopment ? endpoint.includes('?') : endpoint.includes('%3F');
+        const separator = hasParams 
+          ? (isDevelopment ? '&' : '%26')
+          : (isDevelopment ? '?' : '%3F');
         endpoint += separator + `$top=${recordLimit}`;
       }
       
