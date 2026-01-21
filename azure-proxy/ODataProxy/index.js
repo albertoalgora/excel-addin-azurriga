@@ -27,8 +27,8 @@ module.exports = async function (context, req) {
         // Obtener el path de la petición (ej: /odata/, /odata/AccountSet, etc)
         const path = req.params.path || '';
         
-        // URL del servidor OData original (HTTP)
-        const targetUrl = `http://8cf33ac.online-server.cloud:1031/${path}`;
+        // URL del servidor OData original (HTTPS)
+        const targetUrl = `https://azprod.azurriga.com:1035/${path}`;
         
         // Log para debugging
         context.log(`Proxying request to: ${targetUrl}`);
