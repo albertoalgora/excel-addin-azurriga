@@ -11,20 +11,21 @@ import { logRequest } from './db.js';
 export default async function handler(req, res) {
     const startTime = Date.now();
     
-    // CORS HEADERS - Establecer SIEMPRE primero
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Authorization, Accept');
-    res.setHeader('Access-Control-Max-Age', '86400'); // 24 horas
+    // CORS HEADERS - Establecer SIEMPRE primero y para TODOS los casos
+    const origin = req.headers.origin || '*';
     
-    console.log(`[Proxy] ${req.method} ${req.url} from ${req.headers.origin || 'no-origin'}`);
+    res.setHeader('Access-Control-Allow-Origin', origin === '*' ? '*' : origin);
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Authorization, Accept, Accept-Version, Content-Length');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Max-Age', '86400');
+    
+    console.log(`[Proxy] ${req.method} ${req.url} from ${origin || 'no-origin'}`);
     
     // Manejar preflight OPTIONS - DEBE devolver 200
     if (req.method === 'OPTIONS') {
         console.log('[Proxy] Handling OPTIONS preflight - returning 200');
-        res.status(200).end();
-        return;
+        return res.status(200).end();
     }
 
     try {
