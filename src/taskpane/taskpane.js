@@ -17,6 +17,19 @@ let userCredentials = {
 };
 
 /**
+ * Variable global para almacenar el ID de la cuenta seleccionada
+ * @type {string|null}
+ */
+let selectedAccountId = null;
+
+/**
+ * Variables globales para almacenar el rango de fechas seleccionado
+ * @type {string|null}
+ */
+let selectedDateFrom = null;
+let selectedDateTo = null;
+
+/**
  * Función de inicialización de Office.js
  * Se ejecuta cuando el entorno de Office está listo para interactuar
  * @param {Object} info - Información sobre el host de Office
@@ -36,9 +49,28 @@ Office.onReady((info) => {
       const movimientosOptions = document.getElementById("movimientosOptions");
       if (this.value === "movimientos") {
         movimientosOptions.classList.remove("hidden");
+        // Cargar cuentas al mostrar opciones de movimientos
+        loadAccounts();
       } else {
         movimientosOptions.classList.add("hidden");
       }
+    };
+    
+    // Event listener para cambio de cuenta seleccionada
+    document.getElementById("accountSelect").onchange = function() {
+      selectedAccountId = this.value;
+      console.log("Cuenta seleccionada:", this.options[this.selectedIndex].text, "(ID:", selectedAccountId, ")");
+    };
+    
+    // Event listeners para los campos de fecha
+    document.getElementById("dateFrom").onchange = function() {
+      selectedDateFrom = this.value;
+      console.log("Fecha desde seleccionada:", selectedDateFrom);
+    };
+    
+    document.getElementById("dateTo").onchange = function() {
+      selectedDateTo = this.value;
+      console.log("Fecha hasta seleccionada:", selectedDateTo);
     };
   }
 });
@@ -255,6 +287,91 @@ function showNotification(message, type = 'success') {
 }
 
 /**
+ * Carga las cuentas activas desde el servidor y las muestra en el combo
+ * 
+ * Consulta: odata/AccountSet?$filter=Active eq true&$select=Code,Id
+ * - Muestra el Code en el combo
+ * - Almacena el Id al seleccionar una cuenta
+ * 
+ * @async
+ */
+async function loadAccounts() {
+  try {
+    const accountSelect = document.getElementById("accountSelect");
+    
+    // Limpiar opciones existentes (excepto la primera "Todas las cuentas")
+    accountSelect.innerHTML = '<option value="">Todas las cuentas</option>';
+    
+    // Mostrar indicador de carga
+    const loadingOption = document.createElement('option');
+    loadingOption.value = '';
+    loadingOption.textContent = 'Cargando cuentas...';
+    loadingOption.disabled = true;
+    accountSelect.appendChild(loadingOption);
+    
+    // Determinar el proxy correcto
+    const isDevelopment = window.location.hostname === 'localhost';
+    const VERCEL_PROXY = isDevelopment
+      ? '/odata/'
+      : 'https://excel-addin-azurriga.vercel.app/api/proxy?path=odata/';
+    
+    // Construir URL con filtro y select
+    const separator = isDevelopment ? '?' : '%3F';
+    const ampersand = isDevelopment ? '&' : '%26';
+    const endpoint = `${VERCEL_PROXY}AccountSet${separator}$filter=Active eq true${ampersand}$select=Code,Id`;
+    
+    console.log("Cargando cuentas desde:", endpoint);
+    
+    // Obtener las cuentas con header especial para números grandes
+    const response = await authenticatedFetch(endpoint, {
+      headers: {
+        'Accept': 'application/json;IEEE754Compatible=true'
+      }
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Error al cargar cuentas: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    console.log("Cuentas recibidas:", data);
+    
+    // Limpiar el indicador de carga
+    accountSelect.innerHTML = '<option value="">Todas las cuentas</option>';
+    
+    // Verificar que tengamos datos
+    if (data && data.value && data.value.length > 0) {
+      // Agregar cada cuenta al combo
+      data.value.forEach(account => {
+        const option = document.createElement('option');
+        option.value = account.Id;  // Valor interno: ID
+        option.textContent = account.Code;  // Texto visible: Code
+        accountSelect.appendChild(option);
+      });
+      
+      console.log(`${data.value.length} cuentas cargadas correctamente`);
+    } else {
+      // No hay cuentas activas
+      const noDataOption = document.createElement('option');
+      noDataOption.value = '';
+      noDataOption.textContent = 'No hay cuentas activas disponibles';
+      noDataOption.disabled = true;
+      accountSelect.appendChild(noDataOption);
+    }
+    
+  } catch (error) {
+    console.error("Error cargando cuentas:", error);
+    
+    // Mostrar error en el combo
+    const accountSelect = document.getElementById("accountSelect");
+    accountSelect.innerHTML = '<option value="">Error al cargar cuentas</option>';
+    
+    // Mostrar notificación al usuario
+    showNotification("Error al cargar las cuentas: " + error.message, "error");
+  }
+}
+
+/**
  * Wrapper para realizar peticiones HTTP autenticadas al servidor OData
  * 
  * Agrega automáticamente:
@@ -272,15 +389,22 @@ async function authenticatedFetch(url, options = {}) {
     throw new Error("Debe iniciar sesión primero");
   }
 
-  const defaultOptions = {
+  const defaultHeaders = {
+    'Content-Type': 'application/json; charset=utf-8',
+    'Accept': 'application/json; charset=utf-8',
+    'Authorization': `Basic ${btoa(userCredentials.username + ':' + userCredentials.password)}`
+  };
+
+  // Mezclar headers personalizados con los predeterminados
+  const mergedOptions = {
+    ...options,
     headers: {
-      'Content-Type': 'application/json; charset=utf-8',
-      'Accept': 'application/json; charset=utf-8',
-      'Authorization': `Basic ${btoa(userCredentials.username + ':' + userCredentials.password)}`
+      ...defaultHeaders,
+      ...(options.headers || {})
     }
   };
 
-  return fetch(url, { ...defaultOptions, ...options });
+  return fetch(url, mergedOptions);
 }
 
 /**
@@ -354,9 +478,7 @@ async function executeDownload() {
       }
     }
 
-    console.log("Tipo de descarga:", downloadType);
-    console.log("Límite de registros:", recordLimit);
-    console.log("Campos seleccionados:", selectedFields);
+    console.log("Descarga:", downloadType, "| Registros:", recordLimit, "| Cuenta:", selectedAccountId || "Todas", "| Desde:", selectedDateFrom || "N/A", "| Hasta:", selectedDateTo || "N/A");
 
     // Cerrar el modal
     document.getElementById("downloadModal").classList.add("hidden");
@@ -438,8 +560,27 @@ export async function download(downloadType = 'cuentas', recordLimit = '50', sel
           const expandParam = '$expand=FlowCode($select=Code),BudgetCode($select=Code),Account($expand=Master($select=Code);$select=Id),TrnCurrency($select=Id)';
           params.push(expandParam);
           
-          // Agregar $filter solo con Status
-          params.push("$filter=Status eq 'Actual'");
+          // Construir $filter con Status y opcionalmente con AccountId y fechas
+          let filterConditions = ["Status eq 'Actual'"];
+          
+          // Agregar filtro por cuenta si hay una seleccionada
+          if (selectedAccountId) {
+            filterConditions.push(`Account/Id eq ${selectedAccountId}`);
+          }
+          
+          // Agregar filtro por fecha inicio si hay una seleccionada
+          if (selectedDateFrom) {
+            filterConditions.push(`ValueDate ge ${selectedDateFrom}`);
+          }
+          
+          // Agregar filtro por fecha fin si hay una seleccionada
+          if (selectedDateTo) {
+            filterConditions.push(`ValueDate le ${selectedDateTo}`);
+          }
+          
+          // Unir las condiciones del filtro con 'and'
+          const filterParam = `$filter=${filterConditions.join(' and ')}`;
+          params.push(filterParam);
           
           // Unir todos los parámetros
           // En desarrollo (webpack): usar ? y & normales
@@ -486,7 +627,8 @@ export async function download(downloadType = 'cuentas', recordLimit = '50', sel
 
       // Verificar que tengamos datos
       if (!data || !data.value || data.value.length === 0) {
-        throw new Error("No se recibieron datos del servidor");
+        showNotification("No se encontraron registros con los filtros seleccionados", "error");
+        return; // Salir sin lanzar error
       }
 
       const records = data.value; // OData devuelve los datos en data.value

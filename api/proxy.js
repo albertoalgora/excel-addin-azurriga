@@ -10,18 +10,21 @@ import { logRequest } from './db.js';
 
 export default async function handler(req, res) {
     const startTime = Date.now();
-    // CORS HEADERS - Primero antes que nada
+    
+    // CORS HEADERS - Establecer SIEMPRE primero
     res.setHeader('Access-Control-Allow-Credentials', 'true');
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Authorization, Accept');
+    res.setHeader('Access-Control-Max-Age', '86400'); // 24 horas
     
     console.log(`[Proxy] ${req.method} ${req.url} from ${req.headers.origin || 'no-origin'}`);
     
-    // Manejar preflight OPTIONS
+    // Manejar preflight OPTIONS - DEBE devolver 200
     if (req.method === 'OPTIONS') {
-        console.log('[Proxy] Handling OPTIONS preflight');
-        return res.status(204).end();
+        console.log('[Proxy] Handling OPTIONS preflight - returning 200');
+        res.status(200).end();
+        return;
     }
 
     try {

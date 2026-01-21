@@ -11,6 +11,8 @@
   <SupportUrl DefaultValue="https://albertoalgora.github.io/excel-addin-azurriga/support.html"/>
   <AppDomains>
     <AppDomain>https://albertoalgora.github.io</AppDomain>
+    <AppDomain>https://excel-addin-azurriga.vercel.app</AppDomain>
+    <AppDomain>https://azprod.azurriga.com</AppDomain>
   </AppDomains>
   <Hosts>
     <Host Name="Workbook"/>

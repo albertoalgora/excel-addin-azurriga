@@ -111,7 +111,24 @@
 
             <!-- Opciones específicas para Movimientos -->
             <div id="movimientosOptions" class="form-group hidden">
-                <label class="ms-Label">Campos a incluir:</label>
+                <label class="ms-Label">Seleccionar Cuenta:</label>
+                <select id="accountSelect" class="ms-Dropdown" title="Seleccionar cuenta">
+                    <option value="">Todas las cuentas</option>
+                </select>
+                
+                <label class="ms-Label" style="margin-top: 15px;">Filtrar por Fecha (ValueDate):</label>
+                <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                    <div style="flex: 1;">
+                        <label class="ms-Label" style="font-size: 12px;">Desde:</label>
+                        <input type="date" id="dateFrom" class="ms-TextField-field" title="Fecha inicio">
+                    </div>
+                    <div style="flex: 1;">
+                        <label class="ms-Label" style="font-size: 12px;">Hasta:</label>
+                        <input type="date" id="dateTo" class="ms-TextField-field" title="Fecha fin">
+                    </div>
+                </div>
+                
+                <label class="ms-Label" style="margin-top: 15px;">Campos a incluir:</label>
                 <div class="checkbox-group">
                     <div class="ms-CheckBox">
                         <input type="checkbox" id="fieldStatus" value="Status" checked>
