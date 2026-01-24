@@ -506,7 +506,7 @@ async function executeDownload() {
  * 9. Activa la hoja y muestra notificación de éxito
  * 
  * @async
- * @param {string} [downloadType='cuentas'] - Tipo de datos: 'cuentas', 'flujos' o 'movimientos'
+ * @param {string} [downloadType='cuentas'] - Tipo de datos: 'cuentas', 'flujos', 'codigos-presupuestarios' o 'movimientos'
  * @param {string} [recordLimit='50'] - Límite de registros: '50', '100', '500' o 'all'
  * @param {Array<string>} [selectedFields=[]] - Campos seleccionados (solo para movimientos)
  * 
@@ -540,6 +540,19 @@ export async function download(downloadType = 'cuentas', recordLimit = '50', sel
           break;
         case 'flujos':
           endpoint = `${VERCEL_PROXY}FlowCodeSet`;
+          break;
+        case 'codigos-presupuestarios':
+          endpoint = `${VERCEL_PROXY}BudgetCodeSet`;
+          // Especificar los campos solicitados: Code, Id, Description
+          const budgetParams = ['$select=Code,Id,Description'];
+          if (recordLimit !== 'all') {
+            budgetParams.push(`$top=${recordLimit}`);
+          }
+          if (budgetParams.length > 0) {
+            const questionMark = isDevelopment ? '?' : '%3F';
+            const ampersand = isDevelopment ? '&' : '%26';
+            endpoint += questionMark + budgetParams.join(ampersand);
+          }
           break;
         case 'movimientos':
           endpoint = `${VERCEL_PROXY}CashFlowSet`;
@@ -593,8 +606,8 @@ export async function download(downloadType = 'cuentas', recordLimit = '50', sel
           break;
       }
       
-      // Agregar límite de registros para Cuentas y Flujos
-      if (downloadType !== 'movimientos' && recordLimit !== 'all') {
+      // Agregar límite de registros para Cuentas y Flujos (codigos-presupuestarios ya lo gestiona dentro del switch)
+      if (downloadType !== 'movimientos' && downloadType !== 'codigos-presupuestarios' && recordLimit !== 'all') {
         const hasParams = isDevelopment ? endpoint.includes('?') : endpoint.includes('%3F');
         const separator = hasParams 
           ? (isDevelopment ? '&' : '%26')
@@ -641,6 +654,9 @@ export async function download(downloadType = 'cuentas', recordLimit = '50', sel
           break;
         case 'flujos':
           sheetName = 'Flujos';
+          break;
+        case 'codigos-presupuestarios':
+          sheetName = 'Codigos Presupuestarios';
           break;
         case 'movimientos':
           sheetName = 'Movimientos';
