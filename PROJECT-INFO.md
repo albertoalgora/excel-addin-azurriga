@@ -2,7 +2,7 @@
 
 ## 📊 Descripción General
 
-**Add-in Azurriga para Excel** es un complemento de Microsoft Excel que permite conectarse a un servidor OData para descargar datos contables (cuentas, flujos de caja, movimientos contables) de forma rápida y automática con autenticación segura y formato automático de datos.
+**Add-in Azurriga para Excel** es un complemento de Microsoft Excel que permite conectarse a un servidor OData para descargar datos contables (cuentas, flujos de caja, códigos presupuestarios, movimientos contables) de forma rápida y automática con autenticación segura y formato automático de datos.
 
 **Proveedor**: Azurriga  
 **Versión**: 1.0.0.0  
@@ -123,8 +123,9 @@ excel-addin-azurriga/
 Base URL: https://excel-addin-azurriga.vercel.app/api/
 
 /api/proxy?path=odata/AccountSet           # Descargar cuentas
-/api/proxy?path=odata/CashflowSet          # Descargar flujos de caja
-/api/proxy?path=odata/JournalEntrySet      # Descargar movimientos
+/api/proxy?path=odata/FlowCodeSet          # Descargar flujos de caja
+/api/proxy?path=odata/BudgetCodeSet        # Descargar códigos presupuestarios
+/api/proxy?path=odata/CashFlowSet          # Descargar movimientos
 /api/stats                                  # Estadísticas de uso
 ```
 
@@ -377,8 +378,9 @@ const baseUrl = isDevelopment
 
 **Tipos de datos disponibles**:
 - **Cuentas** (`AccountSet`)
-- **Flujos de Caja** (`CashflowSet`)
-- **Movimientos Contables** (`JournalEntrySet`)
+- **Flujos de Caja** (`FlowCodeSet`)
+- **Códigos Presupuestarios** (`BudgetCodeSet`) - Descarga Code, Id, Description
+- **Movimientos Contables** (`CashFlowSet`)
 
 **Opciones de descarga**:
 - Límite de registros: 50, 100, 200, 500, 1000, Todos
