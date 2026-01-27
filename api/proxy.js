@@ -14,7 +14,8 @@ export default async function handler(req, res) {
     // CORS HEADERS - Establecer SIEMPRE primero y para TODOS los casos
     const origin = req.headers.origin || '*';
     
-    res.setHeader('Access-Control-Allow-Origin', origin === '*' ? '*' : origin);
+    // Configurar headers CORS antes que nada
+    res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Authorization, Accept, Accept-Version, Content-Length');
     res.setHeader('Access-Control-Allow-Credentials', 'true');
@@ -22,10 +23,11 @@ export default async function handler(req, res) {
     
     console.log(`[Proxy] ${req.method} ${req.url} from ${origin || 'no-origin'}`);
     
-    // Manejar preflight OPTIONS - DEBE devolver 200
+    // Manejar preflight OPTIONS - DEBE devolver 200 OK
     if (req.method === 'OPTIONS') {
-        console.log('[Proxy] Handling OPTIONS preflight - returning 200');
-        return res.status(200).end();
+        console.log('[Proxy] Handling OPTIONS preflight - returning 200 OK');
+        res.status(200).end();
+        return;
     }
 
     try {
