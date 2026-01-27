@@ -18,7 +18,6 @@ export default async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Authorization, Accept, Accept-Version, Content-Length');
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
     res.setHeader('Access-Control-Max-Age', '86400');
     
     console.log(`[Proxy] ${req.method} ${req.url} from ${origin || 'no-origin'}`);
@@ -79,10 +78,6 @@ export default async function handler(req, res) {
             clearTimeout(timeout);
             console.error('[Proxy] Fetch error:', fetchError.message);
             
-            // Asegurar CORS headers en error
-            res.setHeader('Access-Control-Allow-Origin', '*');
-            res.setHeader('Access-Control-Allow-Credentials', 'true');
-            
             // Determinar status code y error message
             if (fetchError.name === 'AbortError') {
                 statusCode = 504;
@@ -132,10 +127,6 @@ export default async function handler(req, res) {
 
     } catch (error) {
         console.error('[Vercel Proxy] Error:', error);
-        
-        // Asegurar CORS headers en error
-        res.setHeader('Access-Control-Allow-Origin', '*');
-        res.setHeader('Access-Control-Allow-Credentials', 'true');
         
         // Guardar log del error (async, no bloquea respuesta)
         const responseTime = Date.now() - startTime;
