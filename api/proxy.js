@@ -6,7 +6,8 @@
  * Version: 3.0 - Con logging a Turso DB
  */
 
-import { logRequest } from './db.js';
+// Logging temporalmente deshabilitado por problemas con @libsql/client en Vercel
+const logRequest = null;
 
 export default async function handler(req, res) {
     const startTime = Date.now();
@@ -224,17 +225,19 @@ function saveLog(req, path, statusCode, responseTime, errorMessage, responseData
     // Extraer número de registros de la respuesta real
     const numeroRegistros = extractNumeroRegistros(tipoPeticion, responseData);
     
-    // Guardar log (async, no esperar resultado)
-    logRequest({
-        username,
-        tipoPeticion,
-        method: req.method,
-        statusCode,
-        responseTime,
-        userAgent: req.headers['user-agent'] || '',
-        errorMessage,
-        numeroRegistros
-    }).catch(err => {
-        console.error('[Proxy] Error guardando log:', err.message);
-    });
+    // Guardar log (async, no esperar resultado) - Solo si logRequest está disponible
+    if (logRequest) {
+        logRequest({
+            username,
+            tipoPeticion,
+            method: req.method,
+            statusCode,
+            responseTime,
+            userAgent: req.headers['user-agent'] || '',
+            errorMessage,
+            numeroRegistros
+        }).catch(err => {
+            console.error('[Proxy] Error guardando log:', err.message);
+        });
+    }
 }
