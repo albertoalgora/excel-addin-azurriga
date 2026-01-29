@@ -138,9 +138,9 @@ Una vez autenticado:
 
 ### Error: "Cannot find module '@libsql/client'"
 
-- ⚠️ **Problema conocido en Vercel**: El logging está temporalmente deshabilitado
-- El add-in funciona correctamente - este error no afecta su funcionamiento
-- Estamos trabajando en una solución alternativa para el logging en producción
+- ✅ **Este error ha sido solucionado** corrigiendo la configuración de Vercel
+- El add-in funciona correctamente con logging activado
+- Si ves este error, por favor reportarlo - puede indicar un problema de deployment
 
 ### Error al hacer Login: "Credenciales incorrectas"
 

@@ -9,10 +9,7 @@ assets/
 *.md
 webpack.config.js
 babel.config.json
-package.json
-package-lock.json
 manifest.xml
-manifest-production.xml
 *.bat
 *.ps1
 *.html
