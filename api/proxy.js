@@ -6,8 +6,7 @@
  * Version: 3.0 - Con logging a Turso DB
  */
 
-// Logging temporalmente deshabilitado por problemas con @libsql/client en Vercel
-const logRequest = null;
+import { logRequest } from './db.js';
 
 export default async function handler(req, res) {
     const startTime = Date.now();
