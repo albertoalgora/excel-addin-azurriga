@@ -4,9 +4,14 @@
  * 
  * URL: https://tu-proyecto.vercel.app/api/proxy?path=odata/AccountSet
  * Version: 3.0 - Con logging a Turso DB
+ * 
+ * NOTA: Logging deshabilitado por error en Vercel con @libsql/client
+ * Error: "Cannot find module '@libsql/client'" en entorno serverless
+ * Las dependencias están correctas pero Vercel no las instala en /var/task
  */
 
-import { logRequest } from './db.js';
+// Logging deshabilitado - Vercel no puede resolver @libsql/client en entorno serverless
+const logRequest = null;
 
 export default async function handler(req, res) {
     const startTime = Date.now();
