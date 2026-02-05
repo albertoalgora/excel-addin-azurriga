@@ -411,7 +411,7 @@ async function authenticatedFetch(url, options = {}) {
  * Muestra el modal de configuración de descarga
  * 
  * Permite al usuario configurar:
- * - Tipo de descarga: Cuentas, Flujos de caja o Movimientos
+ * - Tipo de descarga: Cuentas, Flujos de caja, Códigos Presupuestarios, Divisas, Cotización o Movimientos
  * - Límite de registros: 50, 100, 500 o todos
  * - Campos específicos (solo para Movimientos)
  * 
@@ -506,7 +506,7 @@ async function executeDownload() {
  * 9. Activa la hoja y muestra notificación de éxito
  * 
  * @async
- * @param {string} [downloadType='cuentas'] - Tipo de datos: 'cuentas', 'flujos', 'codigos-presupuestarios' o 'movimientos'
+ * @param {string} [downloadType='cuentas'] - Tipo de datos: 'cuentas', 'flujos', 'codigos-presupuestarios', 'divisas', 'cotizacion' o 'movimientos'
  * @param {string} [recordLimit='50'] - Límite de registros: '50', '100', '500' o 'all'
  * @param {Array<string>} [selectedFields=[]] - Campos seleccionados (solo para movimientos)
  * 
@@ -553,6 +553,12 @@ export async function download(downloadType = 'cuentas', recordLimit = '50', sel
             const ampersand = isDevelopment ? '&' : '%26';
             endpoint += questionMark + budgetParams.join(ampersand);
           }
+          break;
+        case 'divisas':
+          endpoint = `${VERCEL_PROXY}CurrencySet`;
+          break;
+        case 'cotizacion':
+          endpoint = `${VERCEL_PROXY}QuotationPlaceSet`;
           break;
         case 'movimientos':
           endpoint = `${VERCEL_PROXY}CashFlowSet`;
@@ -606,8 +612,8 @@ export async function download(downloadType = 'cuentas', recordLimit = '50', sel
           break;
       }
       
-      // Agregar límite de registros para Cuentas y Flujos (codigos-presupuestarios ya lo gestiona dentro del switch)
-      if (downloadType !== 'movimientos' && downloadType !== 'codigos-presupuestarios' && recordLimit !== 'all') {
+      // Agregar límite de registros para Cuentas y Flujos (codigos-presupuestarios, divisas y cotizacion ya lo gestionan dentro del switch)
+      if (downloadType !== 'movimientos' && downloadType !== 'codigos-presupuestarios' && downloadType !== 'divisas' && downloadType !== 'cotizacion' && recordLimit !== 'all') {
         const hasParams = isDevelopment ? endpoint.includes('?') : endpoint.includes('%3F');
         const separator = hasParams 
           ? (isDevelopment ? '&' : '%26')
@@ -657,6 +663,12 @@ export async function download(downloadType = 'cuentas', recordLimit = '50', sel
           break;
         case 'codigos-presupuestarios':
           sheetName = 'Codigos Presupuestarios';
+          break;
+        case 'divisas':
+          sheetName = 'Divisas';
+          break;
+        case 'cotizacion':
+          sheetName = 'Cotizacion';
           break;
         case 'movimientos':
           sheetName = 'Movimientos';
@@ -883,144 +895,209 @@ export async function download(downloadType = 'cuentas', recordLimit = '50', sel
 }
 
 /**
- * 📤 FUNCIÓN DE EJEMPLO - Importa datos desde Excel a un servidor externo
+ * Muestra el modal de configuración de importación
  * 
- * NOTA: Esta función es solo un ejemplo educativo. Usa un servidor de prueba
- * (jsonplaceholder.typicode.com) y no se utiliza en producción.
- * 
- * Flujo:
- * 1. Lee datos del rango A1:B2 de la hoja activa
- * 2. Valida que existan encabezados y datos
- * 3. Envía los datos por POST al servidor de prueba
- * 4. Crea una hoja "Resultado" con la respuesta del servidor
- * 5. Muestra notificación de éxito
- * 
- * Validaciones:
- * - Verifica que haya al menos 2 filas (encabezados + datos)
- * - Valida que los encabezados no estén vacíos
- * - Valida que haya al menos un dato
- * 
- * Características:
- * - Sistema de reintentos (3 intentos)
- * - Nombres de hoja únicos (Resultado, Resultado_1, Resultado_2, etc.)
- * - Formato visual para la hoja de resultados
+ * Permite al usuario seleccionar:
+ * - Tipo de importación: Flujos o Movimientos
  * 
  * @async
- * @throws {Error} Si no hay suficientes datos, faltan encabezados o hay problemas de conexión
+ * @throws {Error} Si el usuario no está autenticado o hay problemas con el DOM
  */
 export async function importData() {
   try {
-    console.log("Iniciando función importData");
+    // Verificar que el usuario esté logueado
+    if (!userCredentials.isLoggedIn) {
+      showNotification("Debe iniciar sesión primero", "error");
+      return;
+    }
+
+    const modal = document.getElementById("importModal");
+    modal.classList.remove("hidden");
+    modal.style.display = "block";
+
+    // Configurar botón de crear hoja
+    document.getElementById("importCreateSheet").onclick = async () => {
+      await executeCreateSheet();
+    };
+
+    // Configurar botón de submit
+    document.getElementById("importSubmit").onclick = async () => {
+      await executeImport();
+    };
+
+    // Configurar botón de cancelar
+    document.getElementById("importCancel").onclick = () => {
+      modal.classList.add("hidden");
+    };
+
+    // Cerrar modal al hacer clic fuera
+    window.onclick = (event) => {
+      if (event.target === modal) {
+        modal.classList.add("hidden");
+      }
+    };
+  } catch (error) {
+    console.error("Error al abrir modal de importación:", error);
+    showNotification("Error al abrir el modal de importación", "error");
+  }
+}
+
+/**
+ * Crea una hoja de Excel con las cabeceras según el tipo seleccionado
+ * 
+ * @async
+ * @throws {Error} Si no se seleccionó un tipo o hay problemas al crear la hoja
+ */
+async function executeCreateSheet() {
+  try {
+    const importType = document.getElementById("importType").value;
+    const importError = document.getElementById("importError");
+    
+    // Validar que se haya seleccionado una opción
+    if (!importType) {
+      importError.textContent = "Debe seleccionar un tipo de importación";
+      importError.classList.remove("hidden");
+      return;
+    }
+
+    // Ocultar mensaje de error si había alguno
+    importError.classList.add("hidden");
+
+    console.log("Creando hoja para tipo:", importType);
+
+    // Cerrar el modal
+    document.getElementById("importModal").classList.add("hidden");
+
+    // Crear la hoja según el tipo
+    if (importType === "movimientos") {
+      await createMovimientosSheet();
+    } else if (importType === "flujos") {
+      // TODO: Implementar creación de hoja para flujos
+      showNotification(`Funcionalidad de creación de hoja para flujos en desarrollo`, "info");
+    }
+  } catch (error) {
+    console.error("Error en executeCreateSheet:", error);
+    showNotification("Error al crear la hoja", "error");
+  }
+}
+
+/**
+ * Recopila las opciones seleccionadas del modal y ejecuta la importación
+ * 
+ * Validaciones:
+ * - Verifica que se haya seleccionado un tipo de importación
+ * 
+ * @async
+ * @throws {Error} Si no se cumplen las validaciones o hay problemas al preparar la importación
+ */
+async function executeImport() {
+  try {
+    const importType = document.getElementById("importType").value;
+    const importError = document.getElementById("importError");
+    
+    // Validar que se haya seleccionado una opción
+    if (!importType) {
+      importError.textContent = "Debe seleccionar un tipo de importación";
+      importError.classList.remove("hidden");
+      return;
+    }
+
+    // Ocultar mensaje de error si había alguno
+    importError.classList.add("hidden");
+
+    console.log("Importación de tipo:", importType);
+
+    // Cerrar el modal
+    document.getElementById("importModal").classList.add("hidden");
+
+    // TODO: Implementar lógica de importación de datos al servidor
+    showNotification(`Funcionalidad de importación de ${importType} al servidor en desarrollo`, "info");
+  } catch (error) {
+    console.error("Error en executeImport:", error);
+    showNotification("Error al preparar la importación", "error");
+  }
+}
+
+/**
+ * Crea una hoja de Excel para importar Movimientos con las cabeceras predefinidas
+ * 
+ * @async
+ * @throws {Error} Si hay problemas al crear la hoja o escribir las cabeceras
+ */
+async function createMovimientosSheet() {
+  try {
     await Excel.run(async (context) => {
-      console.log("Dentro de Excel.run");
-      // Suspender actualización de pantalla
       const application = context.workbook.application;
       application.suspendScreenUpdatingUntilNextSync();
-
-      // Validar y obtener datos de origen
-      console.log("Obteniendo hoja activa y rango");
-      const sheet = context.workbook.worksheets.getActiveWorksheet();
-      sheet.load("name");
-      const range = sheet.getRange("A1:B2");
-      range.load(["values", "rowCount", "columnCount"]);
       
+      const sheetName = "Movimientos";
+      
+      // Verificar si la hoja existe y eliminarla
+      try {
+        const existingSheet = context.workbook.worksheets.getItem(sheetName);
+        existingSheet.delete();
+        await context.sync();
+        console.log(`Hoja existente '${sheetName}' eliminada`);
+      } catch (error) {
+        console.log(`La hoja '${sheetName}' no existe, se creará una nueva`);
+      }
+      
+      // Crear la hoja
+      const sheet = context.workbook.worksheets.add(sheetName);
+      sheet.load(["protection", "name"]);
       await context.sync();
-      console.log("Después de sync, valores obtenidos:", range.values);
 
-      // Validaciones de datos
-      if (!range.values || range.values.length < 2) {
-        console.log("Error: No hay suficientes datos", range.values);
-        throw new Error("No hay suficientes datos para importar");
+      if (sheet.protection.protected) {
+        throw new Error("La hoja está protegida. No se pueden escribir datos.");
       }
-
-      if (!range.values[0][0] || !range.values[0][1]) {
-        console.log("Error: Faltan encabezados", range.values[0]);
-        throw new Error("Los encabezados son requeridos");
-      }
-
-      // Validar que los datos no estén vacíos
-      if (!range.values[1][0] && !range.values[1][1]) {
-        throw new Error("No hay datos para importar");
-      }
-
-      const data = {
-        title: range.values[1][0] || "",
-        body: range.values[1][1] || "",
-        userId: 1
-      };
-
-      console.log("Preparando datos para enviar:", data);
-
-      // Intentar enviar datos con reintento
-      let result;
-      let retries = 3;
-      while (retries > 0) {
-        try {
-          console.log(`Intento ${4-retries} de envío de datos`);
-          const response = await fetch('https://jsonplaceholder.typicode.com/posts', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(data)
-          });
-
-          if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-          }
-
-          result = await response.json();
-          break;
-        } catch (fetchError) {
-          retries--;
-          if (retries === 0) throw new Error('Error al enviar datos después de 3 intentos');
-          await new Promise(resolve => setTimeout(resolve, 1000));
-        }
-      }
-
-      // Crear hoja de resultado con nombre único
-      let resultSheetName = "Resultado";
-      let counter = 1;
-      while (true) {
-        try {
-          context.workbook.worksheets.getItem(resultSheetName);
-          resultSheetName = `Resultado_${counter++}`;
-        } catch {
-          break;
-        }
-      }
-
-      const resultSheet = context.workbook.worksheets.add(resultSheetName);
       
-      // Escribir resultados en un solo bloque
-      const resultRange = resultSheet.getRange("A1:C2");
-      resultRange.values = [
-        ["ID", "Estado", "Fecha"],
-        [result.id, "Importado exitosamente", new Date().toLocaleString()]
+      console.log(`Hoja creada: ${sheetName}`);
+
+      // Definir las cabeceras basadas en el JSON
+      const headers = [
+        "TERCERO",
+        "Status",
+        "IsDebit",
+        "Amount",
+        "ValueDate",
+        "TrnAmount",
+        "TrnDate",
+        "Number",
+        "Description",
+        "Account",
+        "BudgetCode",
+        "FlowCode",
+        "TrnCurrency",
+        "QuotationPlace",
+        "UseInBalanceVal",
+        "UseInBalanceTrn",
+        "Interco",
+        "UseIntercoChart",
+        "IsManualFee"
       ];
 
-      // Formatear la hoja de resultados
-      const headerRange = resultRange.getRow(0);
-      headerRange.format.fill.color = "#D3D3D3";
+      // Escribir las cabeceras en la primera fila
+      const headerRange = sheet.getRange(`A1:${String.fromCharCode(64 + headers.length)}1`);
+      headerRange.values = [headers];
+      
+      // Formatear las cabeceras
+      headerRange.format.fill.color = "#4472C4";
+      headerRange.format.font.color = "white";
       headerRange.format.font.bold = true;
-      resultSheet.getUsedRange().format.autofitColumns();
+      headerRange.format.horizontalAlignment = "Center";
+      
+      // Autoajustar columnas
+      sheet.getUsedRange().format.autofitColumns();
+      
+      // Activar la hoja
+      sheet.activate();
       
       await context.sync();
-      showNotification("¡Datos importados exitosamente!", "success");
+      
+      showNotification("Hoja 'Movimientos' creada con las cabeceras correctamente", "success");
     });
   } catch (error) {
-    console.error("Error específico:", error.message);
-    let errorMessage = "Error al importar los datos";
-    
-    // Mensajes de error más específicos
-    if (error.message.includes("suficientes datos")) {
-      errorMessage = "No hay suficientes datos para importar. Verifique el rango seleccionado.";
-    } else if (error.message.includes("enviar datos")) {
-      errorMessage = "Error de conexión al enviar datos. Verifique su conexión a internet.";
-    } else if (error.message.includes("encabezados")) {
-      errorMessage = "Los encabezados son requeridos. Verifique la estructura de los datos.";
-    }
-    
-    showNotification(errorMessage, "error");
+    console.error("Error al crear hoja de Movimientos:", error);
+    showNotification("Error al crear la hoja de Movimientos: " + error.message, "error");
   }
 }

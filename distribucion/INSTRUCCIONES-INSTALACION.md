@@ -94,6 +94,8 @@ Una vez autenticado:
    - **Cuentas** - Listado de cuentas contables
    - **Flujos** - Códigos de flujo de caja
    - **Códigos Presupuestarios** - Códigos presupuestarios (Code, Id, Description)
+   - **Divisas** - Listado de divisas/monedas del sistema
+   - **Cotización** - Lugares de cotización
    - **Movimientos** - Transacciones de caja (requiere configuración adicional)
 
 3. **Elige cantidad de registros:**

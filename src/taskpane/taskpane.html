@@ -93,6 +93,8 @@
                     <option value="cuentas">Cuentas</option>
                     <option value="flujos">Flujos</option>
                     <option value="codigos-presupuestarios">Códigos Presupuestarios</option>
+                    <option value="divisas">Divisas</option>
+                    <option value="cotizacion">Cotización</option>
                     <option value="movimientos">Movimientos</option>
                 </select>
             </div>
@@ -165,6 +167,41 @@
                     <span class="ms-Button-label">Descargar</span>
                 </button>
                 <button class="ms-Button" id="downloadCancel">
+                    <span class="ms-Button-label">Cancelar</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Importación -->
+    <div id="importModal" class="modal hidden">
+        <div class="modal-content ms-depth-4">
+            <h2 class="ms-font-xl">Opciones de Importación</h2>
+            
+            <p class="ms-font-m" style="margin-bottom: 20px; color: #605e5c;">
+                Seleccione el tipo de datos que desea importar desde Excel al servidor:
+            </p>
+            
+            <!-- Selector de tipo de importación -->
+            <div class="form-group">
+                <label class="ms-Label">Tipo de importación:</label>
+                <select id="importType" class="ms-Dropdown" title="Seleccionar tipo de importación">
+                    <option value="">-- Seleccione una opción --</option>
+                    <option value="flujos">Flujos</option>
+                    <option value="movimientos">Movimientos</option>
+                </select>
+            </div>
+
+            <div id="importError" class="error-message hidden"></div>
+            
+            <div class="modal-buttons">
+                <button class="ms-Button ms-Button--primary" id="importCreateSheet">
+                    <span class="ms-Button-label">Crear hoja</span>
+                </button>
+                <button class="ms-Button ms-Button--primary" id="importSubmit">
+                    <span class="ms-Button-label">Importar</span>
+                </button>
+                <button class="ms-Button" id="importCancel">
                     <span class="ms-Button-label">Cancelar</span>
                 </button>
             </div>
