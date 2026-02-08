@@ -23,6 +23,36 @@ let userCredentials = {
 let selectedAccountId = null;
 
 /**
+ * Variable global para almacenar las cuentas descargadas desde OData
+ * @type {Array<{Id: string, Code: string}>}
+ */
+let cachedAccounts = [];
+
+/**
+ * Variable global para almacenar los flujos de caja descargados desde OData
+ * @type {Array<{Id: string, Code: string}>}
+ */
+let cachedFlowCodes = [];
+
+/**
+ * Variable global para almacenar los códigos presupuestarios descargados desde OData
+ * @type {Array<{Id: string, Code: string}>}
+ */
+let cachedBudgetCodes = [];
+
+/**
+ * Variable global para almacenar las divisas descargadas desde OData
+ * @type {Array<{Id: string, Code: string}>}
+ */
+let cachedCurrencies = [];
+
+/**
+ * Variable global para almacenar los lugares de cotización descargados desde OData
+ * @type {Array<{Id: number, Description: string}>}
+ */
+let cachedQuotationPlaces = [];
+
+/**
  * Variables globales para almacenar el rango de fechas seleccionado
  * @type {string|null}
  */
@@ -72,6 +102,9 @@ Office.onReady((info) => {
       selectedDateTo = this.value;
       console.log("Fecha hasta seleccionada:", selectedDateTo);
     };
+    
+    // Event listener para cerrar el panel de errores detallados
+    document.getElementById("closeErrorDetails").onclick = hideErrorDetails;
   }
 });
 
@@ -287,6 +320,29 @@ function showNotification(message, type = 'success') {
 }
 
 /**
+ * Muestra un panel modal con errores detallados
+ * @param {string} message - Mensaje detallado de errores
+ */
+function showErrorDetails(message) {
+  const panel = document.getElementById('errorDetailsPanel');
+  const messageEl = document.getElementById('errorDetailsMessage');
+  
+  // Establecer el mensaje
+  messageEl.textContent = message;
+  
+  // Mostrar el panel
+  panel.classList.remove('hidden');
+}
+
+/**
+ * Oculta el panel de errores detallados
+ */
+function hideErrorDetails() {
+  const panel = document.getElementById('errorDetailsPanel');
+  panel.classList.add('hidden');
+}
+
+/**
  * Carga las cuentas activas desde el servidor y las muestra en el combo
  * 
  * Consulta: odata/AccountSet?$filter=Active eq true&$select=Code,Id
@@ -341,6 +397,9 @@ async function loadAccounts() {
     
     // Verificar que tengamos datos
     if (data && data.value && data.value.length > 0) {
+      // Almacenar las cuentas en el caché global
+      cachedAccounts = data.value;
+      
       // Agregar cada cuenta al combo
       data.value.forEach(account => {
         const option = document.createElement('option');
@@ -368,6 +427,201 @@ async function loadAccounts() {
     
     // Mostrar notificación al usuario
     showNotification("Error al cargar las cuentas: " + error.message, "error");
+  }
+}
+
+/**
+ * Carga los flujos de caja desde el servidor
+ * 
+ * Consulta: odata/FlowCodeSet?$select=Code,Id
+ * 
+ * @async
+ */
+async function loadFlowCodes() {
+  try {
+    console.log("Iniciando carga de flujos de caja...");
+    
+    const isDevelopment = window.location.hostname === 'localhost';
+    const VERCEL_PROXY = isDevelopment
+      ? '/odata/'
+      : 'https://excel-addin-azurriga.vercel.app/api/proxy?path=odata/';
+    
+    const separator = isDevelopment ? '?' : '%3F';
+    const endpoint = `${VERCEL_PROXY}FlowCodeSet${separator}$select=Code,Id`;
+    
+    console.log("Cargando flujos desde:", endpoint);
+    
+    const response = await authenticatedFetch(endpoint, {
+      headers: {
+        'Accept': 'application/json;IEEE754Compatible=true'
+      }
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Error al cargar flujos: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    console.log("Flujos recibidos:", data);
+    
+    if (data && data.value && data.value.length > 0) {
+      cachedFlowCodes = data.value;
+      console.log(`${data.value.length} flujos de caja cargados correctamente`);
+    } else {
+      console.warn("No hay flujos de caja disponibles");
+    }
+  } catch (error) {
+    console.error("Error cargando flujos de caja:", error);
+    showNotification("Error al cargar flujos de caja: " + error.message, "error");
+  }
+}
+
+/**
+ * Carga los códigos presupuestarios desde el servidor
+ * 
+ * Consulta: odata/BudgetCodeSet?$select=Code,Id
+ * 
+ * @async
+ */
+async function loadBudgetCodes() {
+  try {
+    console.log("Iniciando carga de códigos presupuestarios...");
+    
+    const isDevelopment = window.location.hostname === 'localhost';
+    const VERCEL_PROXY = isDevelopment
+      ? '/odata/'
+      : 'https://excel-addin-azurriga.vercel.app/api/proxy?path=odata/';
+    
+    const separator = isDevelopment ? '?' : '%3F';
+    const endpoint = `${VERCEL_PROXY}BudgetCodeSet${separator}$select=Code,Id`;
+    
+    console.log("Cargando códigos presupuestarios desde:", endpoint);
+    
+    const response = await authenticatedFetch(endpoint, {
+      headers: {
+        'Accept': 'application/json;IEEE754Compatible=true'
+      }
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Error al cargar códigos presupuestarios: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    console.log("Códigos presupuestarios recibidos:", data);
+    
+    if (data && data.value && data.value.length > 0) {
+      cachedBudgetCodes = data.value;
+      console.log(`${data.value.length} códigos presupuestarios cargados correctamente`);
+    } else {
+      console.warn("No hay códigos presupuestarios disponibles");
+    }
+  } catch (error) {
+    console.error("Error cargando códigos presupuestarios:", error);
+    showNotification("Error al cargar códigos presupuestarios: " + error.message, "error");
+  }
+}
+
+/**
+ * Carga las divisas desde el servidor
+ * 
+ * Consulta: odata/CurrencySet (sin $select para obtener todos los campos)
+ * 
+ * @async
+ */
+async function loadCurrencies() {
+  try {
+    console.log("Iniciando carga de divisas...");
+    
+    const isDevelopment = window.location.hostname === 'localhost';
+    const VERCEL_PROXY = isDevelopment
+      ? '/odata/'
+      : 'https://excel-addin-azurriga.vercel.app/api/proxy?path=odata/';
+    
+    // No usar $select para obtener todos los campos disponibles
+    const endpoint = `${VERCEL_PROXY}CurrencySet`;
+    
+    console.log("Cargando divisas desde:", endpoint);
+    
+    const response = await authenticatedFetch(endpoint, {
+      headers: {
+        'Accept': 'application/json;IEEE754Compatible=true'
+      }
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Error al cargar divisas: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    console.log("Divisas recibidas:", data);
+    
+    if (data && data.value && data.value.length > 0) {
+      // Mapear los datos según la estructura real de CurrencySet
+      // Asumiendo que tiene Id como primary key
+      cachedCurrencies = data.value.map(curr => ({
+        Id: curr.Id || curr.Code || curr.id,
+        Code: curr.Code || curr.Id || curr.id
+      }));
+      console.log(`${cachedCurrencies.length} divisas cargadas correctamente`);
+      console.log("Ejemplo de divisa:", cachedCurrencies[0]);
+    } else {
+      console.warn("No hay divisas disponibles");
+    }
+  } catch (error) {
+    console.error("Error cargando divisas:", error);
+    showNotification("Error al cargar divisas: " + error.message, "error");
+  }
+}
+
+/**
+ * Carga los lugares de cotización desde el servidor
+ * 
+ * Consulta: odata/QuotationPlaceSet (sin $select para obtener todos los campos)
+ * 
+ * @async
+ */
+async function loadQuotationPlaces() {
+  try {
+    console.log("Iniciando carga de lugares de cotización...");
+    
+    const isDevelopment = window.location.hostname === 'localhost';
+    const VERCEL_PROXY = isDevelopment
+      ? '/odata/'
+      : 'https://excel-addin-azurriga.vercel.app/api/proxy?path=odata/';
+    
+    // No usar $select para obtener todos los campos disponibles
+    const endpoint = `${VERCEL_PROXY}QuotationPlaceSet`;
+    
+    console.log("Cargando lugares de cotización desde:", endpoint);
+    
+    const response = await authenticatedFetch(endpoint, {
+      headers: {
+        'Accept': 'application/json;IEEE754Compatible=true'
+      }
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Error al cargar lugares de cotización: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    console.log("Lugares de cotización recibidos:", data);
+    
+    if (data && data.value && data.value.length > 0) {
+      // Mapear los datos según la estructura real de QuotationPlaceSet
+      cachedQuotationPlaces = data.value.map(qp => ({
+        Id: qp.Id || qp.id,
+        Description: qp.Description || qp.Name || qp.description || qp.name || `Cotización ${qp.Id}`
+      }));
+      console.log(`${cachedQuotationPlaces.length} lugares de cotización cargados correctamente`);
+      console.log("Ejemplo de lugar de cotización:", cachedQuotationPlaces[0]);
+    } else {
+      console.warn("No hay lugares de cotización disponibles");
+    }
+  } catch (error) {
+    console.error("Error cargando lugares de cotización:", error);
+    showNotification("Error al cargar lugares de cotización: " + error.message, "error");
   }
 }
 
@@ -970,6 +1224,15 @@ async function executeCreateSheet() {
 
     // Crear la hoja según el tipo
     if (importType === "movimientos") {
+      // Cargar todos los datos necesarios antes de crear la hoja
+      showNotification("Descargando datos necesarios...", "info");
+      await Promise.all([
+        loadAccounts(),
+        loadFlowCodes(),
+        loadBudgetCodes(),
+        loadCurrencies(),
+        loadQuotationPlaces()
+      ]);
       await createMovimientosSheet();
     } else if (importType === "flujos") {
       // TODO: Implementar creación de hoja para flujos
@@ -1010,11 +1273,594 @@ async function executeImport() {
     // Cerrar el modal
     document.getElementById("importModal").classList.add("hidden");
 
-    // TODO: Implementar lógica de importación de datos al servidor
-    showNotification(`Funcionalidad de importación de ${importType} al servidor en desarrollo`, "info");
+    // Ejecutar importación según el tipo
+    if (importType === "movimientos") {
+      await importMovimientosToOData();
+    } else if (importType === "flujos") {
+      showNotification(`Funcionalidad de importación de flujos en desarrollo`, "info");
+    }
   } catch (error) {
     console.error("Error en executeImport:", error);
     showNotification("Error al preparar la importación", "error");
+  }
+}
+
+/**
+ * Lee los datos de la hoja "Movimientos" en Excel
+ * 
+ * @async
+ * @returns {Promise<Array<Object>>} Array de objetos con los datos de cada fila
+ * @throws {Error} Si la hoja no existe o hay problemas al leer los datos
+ */
+async function readMovimientosSheet() {
+  return await Excel.run(async (context) => {
+    try {
+      const sheet = context.workbook.worksheets.getItem("Movimientos");
+      const usedRange = sheet.getUsedRange();
+      usedRange.load(["values", "rowCount"]);
+      await context.sync();
+
+      const values = usedRange.values;
+      
+      if (values.length <= 1) {
+        throw new Error("La hoja no contiene datos para importar");
+      }
+
+      // La primera fila son las cabeceras
+      const headers = values[0];
+      const records = [];
+
+      // Procesar cada fila de datos (empezando desde la fila 2)
+      for (let i = 1; i < values.length; i++) {
+        const row = values[i];
+        const record = {};
+        
+        // Mapear cada columna a su campo correspondiente
+        for (let j = 0; j < headers.length; j++) {
+          const header = headers[j];
+          const value = row[j];
+          
+          // Saltar valores vacíos para campos opcionales
+          if (value !== null && value !== undefined && value !== "") {
+            record[header] = value;
+          }
+        }
+        
+        // Solo agregar registros que tengan al menos un campo
+        if (Object.keys(record).length > 0) {
+          records.push(record);
+        }
+      }
+
+      console.log(`Leídos ${records.length} registros de la hoja Movimientos`);
+      return records;
+    } catch (error) {
+      if (error.message.includes("ItemNotFound")) {
+        throw new Error("No existe la hoja 'Movimientos'. Debe crearla primero.");
+      }
+      throw error;
+    }
+  });
+}
+
+/**
+ * Valida un registro de movimiento según los criterios de la Historia de Usuario
+ * 
+ * @param {Object} record - Registro a validar
+ * @param {number} rowNumber - Número de fila (para mensajes de error)
+ * @returns {Object} Objeto con {isValid: boolean, errors: string[], errorFields: string[]}
+ */
+function validateMovimientoRecord(record, rowNumber) {
+  const errors = [];
+  const errorFields = []; // Campos con error para marcar en rojo
+
+  // Validar Status (requerido)
+  if (!record.Status || record.Status.toString().trim() === "") {
+    errors.push(`Fila ${rowNumber}: El campo Status es obligatorio`);
+    errorFields.push('Status');
+  }
+
+  // Validar IsDebit (requerido)
+  if (record.IsDebit === null || record.IsDebit === undefined || record.IsDebit === "") {
+    errors.push(`Fila ${rowNumber}: El campo IsDebit es obligatorio`);
+    errorFields.push('IsDebit');
+  }
+
+  // Validar Amount (distinto de 0)
+  if (!record.Amount || parseFloat(record.Amount) === 0) {
+    errors.push(`Fila ${rowNumber}: El campo Amount debe ser distinto de 0`);
+    errorFields.push('Amount');
+  }
+
+  // Validar ValueDate (requerido y formato válido)
+  if (!record.ValueDate) {
+    errors.push(`Fila ${rowNumber}: El campo ValueDate es obligatorio`);
+    errorFields.push('ValueDate');
+  } else if (!isValidDate(record.ValueDate)) {
+    errors.push(`Fila ${rowNumber}: El campo ValueDate tiene formato inválido. Use dd/mm/yyyy`);
+    errorFields.push('ValueDate');
+  }
+
+  // Validar TrnAmount (distinto de 0)
+  if (!record.TrnAmount || parseFloat(record.TrnAmount) === 0) {
+    errors.push(`Fila ${rowNumber}: El campo TrnAmount debe ser distinto de 0`);
+    errorFields.push('TrnAmount');
+  }
+
+  // Validar TrnDate (requerido y formato válido)
+  if (!record.TrnDate) {
+    errors.push(`Fila ${rowNumber}: El campo TrnDate es obligatorio`);
+    errorFields.push('TrnDate');
+  } else if (!isValidDate(record.TrnDate)) {
+    errors.push(`Fila ${rowNumber}: El campo TrnDate tiene formato inválido. Use dd/mm/yyyy`);
+    errorFields.push('TrnDate');
+  }
+
+  // Validar Number (mayor o igual a 1)
+  if (!record.Number || parseInt(record.Number) < 1) {
+    errors.push(`Fila ${rowNumber}: El campo Number debe ser >= 1`);
+    errorFields.push('Number');
+  }
+
+  // Validar Account (requerido)
+  if (!record.Account || record.Account.toString().trim() === "") {
+    errors.push(`Fila ${rowNumber}: El campo Account es obligatorio`);
+    errorFields.push('Account');
+  }
+
+  // Validar campos booleanos requeridos
+  const booleanFields = ['UseInBalanceVal', 'UseInBalanceTrn', 'Interco', 'UseIntercoChart', 'IsManualFee'];
+  booleanFields.forEach(field => {
+    if (record[field] === null || record[field] === undefined || record[field] === "") {
+      errors.push(`Fila ${rowNumber}: El campo ${field} es obligatorio`);
+      errorFields.push(field);
+    }
+  });
+
+  return {
+    isValid: errors.length === 0,
+    errors: errors,
+    errorFields: errorFields,
+    rowNumber: rowNumber
+  };
+}
+
+/**
+ * Marca las celdas con errores de validación en rojo
+ * 
+ * @async
+ * @param {Array<Object>} validationResults - Resultados de validación con errorFields y rowNumber
+ */
+async function markErrorCells(validationResults) {
+  await Excel.run(async (context) => {
+    try {
+      const sheet = context.workbook.worksheets.getItem("Movimientos");
+      
+      // Obtener las cabeceras para saber qué columna es cada campo
+      const headerRange = sheet.getRange("A1:S1");
+      headerRange.load("values");
+      await context.sync();
+      
+      const headers = headerRange.values[0];
+      
+      // Procesar cada resultado de validación que tenga errores
+      validationResults.forEach(result => {
+        if (!result.isValid && result.errorFields.length > 0) {
+          result.errorFields.forEach(fieldName => {
+            // Encontrar el índice de la columna para este campo
+            const columnIndex = headers.indexOf(fieldName);
+            
+            if (columnIndex !== -1) {
+              // Convertir índice de columna a letra (A, B, C, etc.)
+              const columnLetter = String.fromCharCode(65 + columnIndex);
+              const cellAddress = `${columnLetter}${result.rowNumber}`;
+              
+              // Marcar solo el contorno de la celda en rojo
+              const errorCell = sheet.getRange(cellAddress);
+              ["EdgeTop", "EdgeBottom", "EdgeLeft", "EdgeRight"].forEach(edge => {
+                const border = errorCell.format.borders.getItem(edge);
+                border.style = "Continuous";
+                border.color = "#CC0000"; // Borde rojo
+              });
+            }
+          });
+        }
+      });
+      
+      await context.sync();
+      console.log("Celdas con errores marcadas con borde rojo");
+    } catch (error) {
+      console.error("Error al marcar celdas:", error);
+    }
+  });
+}
+
+/**
+ * Valida si un valor es una fecha válida en formato dd/mm/yyyy o número serial de Excel
+ * 
+ * @param {any} value - Valor a validar
+ * @returns {boolean} true si es una fecha válida
+ */
+function isValidDate(value) {
+  if (!value) return false;
+
+  // Si es un número (serial de Excel), verificar que esté en rango válido
+  if (typeof value === 'number') {
+    return value > 0 && value < 2958466; // Rango válido de Excel (1900-9999)
+  }
+
+  // Si es string, validar formato dd/mm/yyyy
+  if (typeof value === 'string') {
+    const datePattern = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/;
+    const match = value.match(datePattern);
+    
+    if (!match) return false;
+    
+    const day = parseInt(match[1]);
+    const month = parseInt(match[2]);
+    const year = parseInt(match[3]);
+    
+    // Validar rangos
+    if (month < 1 || month > 12) return false;
+    if (day < 1 || day > 31) return false;
+    if (year < 1900 || year > 9999) return false;
+    
+    // Validar días por mes
+    const daysInMonth = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+    const isLeapYear = (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0);
+    if (month === 2 && isLeapYear) {
+      return day <= 29;
+    }
+    return day <= daysInMonth[month - 1];
+  }
+
+  return false;
+}
+
+/**
+ * Convierte una fecha de Excel (número serial o dd/mm/yyyy) a formato ISO 8601
+ * 
+ * @param {any} dateValue - Valor de fecha (número serial de Excel o string dd/mm/yyyy)
+ * @returns {string} Fecha en formato ISO 8601 (YYYY-MM-DDTHH:mm:ssZ)
+ */
+function convertToISO8601(dateValue) {
+  let date;
+
+  // Si es un número serial de Excel
+  if (typeof dateValue === 'number') {
+    // Excel cuenta los días desde 30/12/1899
+    const excelEpoch = new Date(1899, 11, 30);
+    const msPerDay = 24 * 60 * 60 * 1000;
+    date = new Date(excelEpoch.getTime() + dateValue * msPerDay);
+  } 
+  // Si es string en formato dd/mm/yyyy
+  else if (typeof dateValue === 'string') {
+    const parts = dateValue.split('/');
+    const day = parseInt(parts[0]);
+    const month = parseInt(parts[1]) - 1; // JavaScript months son 0-indexed
+    const year = parseInt(parts[2]);
+    date = new Date(year, month, day);
+  }
+  else {
+    throw new Error(`Formato de fecha no soportado: ${dateValue}`);
+  }
+
+  // Convertir a ISO 8601 (formato UTC con Z)
+  return date.toISOString().split('.')[0] + 'Z';
+}
+
+/**
+ * Construye el payload JSON para enviar un movimiento al servidor OData
+ * 
+ * @param {Object} record - Registro con los datos del movimiento
+ * @returns {Object} Objeto JSON en el formato requerido por OData
+ */
+function buildMovimientoJSON(record) {
+  const payload = {};
+
+  // Campo opcional TERCERO - solo se incluye si tiene valor
+  if (record.TERCERO && record.TERCERO.toString().trim() !== "") {
+    payload.TERCERO = record.TERCERO.toString().trim();
+  }
+
+  // Construir el objeto Entity
+  payload.Entity = {
+    Status: record.Status.toString(),
+    IsDebit: parseBooleanField(record.IsDebit),
+    Amount: parseFloat(record.Amount),
+    ValueDate: convertToISO8601(record.ValueDate),
+    TrnAmount: parseFloat(record.TrnAmount),
+    TrnDate: convertToISO8601(record.TrnDate),
+    Number: parseInt(record.Number),
+    UseInBalanceVal: parseBooleanField(record.UseInBalanceVal),
+    UseInBalanceTrn: parseBooleanField(record.UseInBalanceTrn),
+    Interco: parseBooleanField(record.Interco),
+    UseIntercoChart: parseBooleanField(record.UseIntercoChart),
+    IsManualFee: parseBooleanField(record.IsManualFee)
+  };
+
+  // Descripción (opcional)
+  if (record.Description) {
+    payload.Entity.Description = record.Description.toString();
+  }
+
+  // Mapear Account a ID usando el caché
+  const accountCode = record.Account.toString().trim();
+  const account = cachedAccounts.find(acc => acc.Code === accountCode);
+  if (account) {
+    payload.Entity["Account@odata.bind"] = `Account2CashSet(${account.Id})`;
+  } else {
+    throw new Error(`No se encontró la cuenta con código: ${accountCode}`);
+  }
+
+  // Mapear BudgetCode a ID (opcional)
+  if (record.BudgetCode) {
+    const budgetCode = record.BudgetCode.toString().trim();
+    const budget = cachedBudgetCodes.find(bc => bc.Code === budgetCode);
+    if (budget) {
+      payload.Entity["BudgetCode@odata.bind"] = `BudgetCodeSet(${budget.Id})`;
+    } else {
+      console.warn(`No se encontró el código presupuestario: ${budgetCode}`);
+    }
+  }
+
+  // Mapear FlowCode a ID (opcional)
+  if (record.FlowCode) {
+    const flowCode = record.FlowCode.toString().trim();
+    const flow = cachedFlowCodes.find(fc => fc.Code === flowCode);
+    if (flow) {
+      payload.Entity["FlowCode@odata.bind"] = `FlowCodeSet(${flow.Id})`;
+    } else {
+      console.warn(`No se encontró el flujo de caja: ${flowCode}`);
+    }
+  }
+
+  // Mapear TrnCurrency a ID (opcional)
+  if (record.TrnCurrency) {
+    const currencyCode = record.TrnCurrency.toString().trim();
+    const currency = cachedCurrencies.find(c => c.Code === currencyCode);
+    if (currency) {
+      payload.Entity["TrnCurrency@odata.bind"] = `CurrencySet('${currency.Id}')`;
+    } else {
+      console.warn(`No se encontró la divisa: ${currencyCode}`);
+    }
+  }
+
+  // Mapear QuotationPlace a ID (opcional)
+  if (record.QuotationPlace) {
+    const quotationDesc = record.QuotationPlace.toString().trim();
+    const quotation = cachedQuotationPlaces.find(qp => qp.Description === quotationDesc);
+    if (quotation) {
+      payload.Entity["QuotationPlace@odata.bind"] = `QuotationPlaceSet(${quotation.Id})`;
+    } else {
+      console.warn(`No se encontró el lugar de cotización: ${quotationDesc}`);
+    }
+  }
+
+  return payload;
+}
+
+/**
+ * Parsea un campo booleano de Excel a booleano JavaScript
+ * 
+ * @param {any} value - Valor del campo (puede ser string "true"/"false" o booleano)
+ * @returns {boolean} Valor booleano
+ */
+function parseBooleanField(value) {
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'string') {
+    return value.toLowerCase() === 'true';
+  }
+  return Boolean(value);
+}
+
+/**
+ * Construye un JSON de batch request para OData v4
+ * 
+ * @param {Array} records - Array de registros de movimientos
+ * @returns {Object} Objeto con la estructura de batch request
+ */
+function buildBatchRequestJSON(records) {
+  const requests = records.map((record, index) => {
+    // Construir el payload individual usando la función existente
+    const payload = buildMovimientoJSON(record);
+    
+    return {
+      id: String(index + 1),
+      method: "POST",
+      url: "CashFlowDtoWithExtendersSet",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: payload
+    };
+  });
+  
+  return { requests };
+}
+
+/**
+ * Importa movimientos desde la hoja de Excel al servidor OData
+ * 
+ * @async
+ */
+async function importMovimientosToOData() {
+  try {
+    showNotification("Preparando importación...", "info");
+
+    // 1. Cargar todos los datos de referencia necesarios
+    console.log("Cargando datos de referencia...");
+    await Promise.all([
+      loadAccounts(),
+      loadFlowCodes(),
+      loadBudgetCodes(),
+      loadCurrencies(),
+      loadQuotationPlaces()
+    ]);
+
+    // 2. Leer datos de la hoja
+    console.log("Leyendo datos de la hoja Movimientos...");
+    const records = await readMovimientosSheet();
+
+    if (records.length === 0) {
+      showNotification("No hay datos para importar", "error");
+      return;
+    }
+
+    // 3. Validar todos los registros
+    console.log(`Validando ${records.length} registros...`);
+    const validationResults = records.map((record, index) => 
+      validateMovimientoRecord(record, index + 2) // +2 porque la fila 1 son cabeceras
+    );
+
+    const allErrors = validationResults.flatMap(result => result.errors);
+    
+    if (allErrors.length > 0) {
+      console.error("Errores de validación:", allErrors);
+      
+      // Marcar celdas con errores en rojo
+      await markErrorCells(validationResults);
+      
+      // Crear mensaje detallado con los campos problemáticos
+      const invalidRecords = validationResults.filter(r => !r.isValid);
+      let errorMessage = `⚠️ Validación fallida: ${allErrors.length} error(es) encontrado(s)\n\n`;
+      
+      invalidRecords.forEach(result => {
+        errorMessage += `📍 Fila ${result.rowNumber}:\n`;
+        errorMessage += `   Campos con problema: ${result.errorFields.join(', ')}\n\n`;
+      });
+      
+      errorMessage += "Las celdas con errores han sido marcadas en rojo. Corríjalas e intente de nuevo.";
+      
+      // Mostrar mensaje en notificación
+      showNotification("Errores de validación encontrados", "error");
+      
+      // Mostrar mensaje detallado en panel modal
+      showErrorDetails(errorMessage);
+      
+      allErrors.forEach(error => console.error(error));
+      return;
+    }
+
+    // 4. Si solo hay un registro, enviarlo
+    if (records.length === 1) {
+      console.log("Enviando único registro al servidor...");
+      const payload = buildMovimientoJSON(records[0]);
+
+      console.log("Payload JSON:", JSON.stringify(payload, null, 2));
+
+      const isDevelopment = window.location.hostname === 'localhost';
+      const VERCEL_PROXY = isDevelopment
+        ? '/odata/'
+        : 'https://excel-addin-azurriga.vercel.app/api/proxy?path=odata/';
+
+      const endpoint = `${VERCEL_PROXY}CashFlowDtoWithExtendersSet`;
+
+      console.log("Enviando POST a:", endpoint);
+
+      const response = await authenticatedFetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json; charset=utf-8',
+          'Accept': 'application/json; charset=utf-8'
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log("Respuesta del servidor:", result);
+        showNotification("✅ Movimiento importado exitosamente al servidor OData", "success");
+      } else {
+        const errorText = await response.text();
+        console.error("Error del servidor:", response.status, errorText);
+        
+        // Crear mensaje de error detallado
+        let errorMessage = `❌ Error al añadir el movimiento\n\n`;
+        errorMessage += `Código de error: ${response.status}\n`;
+        errorMessage += `Detalles: ${errorText.substring(0, 200)}\n\n`;
+        errorMessage += `💡 Sugerencias:\n`;
+        errorMessage += `- Verifique que el campo Status sea "Actual" (no "Active")\n`;
+        errorMessage += `- Revise que todos los códigos de cuenta, flujo y presupuesto sean válidos\n`;
+        errorMessage += `- Compruebe que las fechas estén en formato correcto\n`;
+        
+        showNotification("Error al importar movimiento", "error");
+        showErrorDetails(errorMessage);
+      }
+    } else {
+      // Múltiples registros: usar OData $batch
+      console.log(`Enviando ${records.length} registros en lote al servidor...`);
+      const batchPayload = buildBatchRequestJSON(records);
+
+      console.log("Batch Payload JSON:", JSON.stringify(batchPayload, null, 2));
+
+      const isDevelopment = window.location.hostname === 'localhost';
+      const VERCEL_PROXY = isDevelopment
+        ? '/odata/'
+        : 'https://excel-addin-azurriga.vercel.app/api/proxy?path=odata/';
+
+      const endpoint = `${VERCEL_PROXY}$batch`;
+
+      console.log("Enviando POST batch a:", endpoint);
+
+      const response = await authenticatedFetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json; charset=utf-8',
+          'Accept': 'application/json; charset=utf-8'
+        },
+        body: JSON.stringify(batchPayload)
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log("Respuesta del servidor (batch):", result);
+        
+        // Analizar respuesta batch para ver cuántos tuvieron éxito
+        const responses = result.responses || [];
+        const successCount = responses.filter(r => r.status >= 200 && r.status < 300).length;
+        const errorCount = responses.length - successCount;
+        
+        if (errorCount === 0) {
+          showNotification(`✅ ${successCount} movimientos importados exitosamente`, "success");
+        } else {
+          let errorMessage = `⚠️ Importación parcial:\n\n`;
+          errorMessage += `✅ Exitosos: ${successCount}\n`;
+          errorMessage += `❌ Fallidos: ${errorCount}\n\n`;
+          errorMessage += `Detalles de errores:\n`;
+          
+          responses.forEach((resp, idx) => {
+            if (resp.status >= 300) {
+              errorMessage += `\n• Registro ${idx + 1} (fila ${idx + 2}): Error ${resp.status}\n`;
+              if (resp.body && resp.body.error) {
+                errorMessage += `  ${resp.body.error.message}\n`;
+              }
+            }
+          });
+          
+          showNotification(`Importación completada con errores`, "warning");
+          showErrorDetails(errorMessage);
+        }
+      } else {
+        const errorText = await response.text();
+        console.error("Error del servidor (batch):", response.status, errorText);
+        
+        let errorMessage = `❌ Error al enviar el lote de movimientos\n\n`;
+        errorMessage += `Código de error: ${response.status}\n`;
+        errorMessage += `Detalles: ${errorText.substring(0, 300)}\n\n`;
+        errorMessage += `💡 Sugerencias:\n`;
+        errorMessage += `- Verifique que todos los registros tengan datos válidos\n`;
+        errorMessage += `- Compruebe la conectividad con el servidor OData\n`;
+        errorMessage += `- Revise los logs de consola para más detalles\n`;
+        
+        showNotification("Error al importar lote de movimientos", "error");
+        showErrorDetails(errorMessage);
+      }
+    }
+
+  } catch (error) {
+    console.error("Error durante la importación:", error);
+    showNotification("Error durante la importación: " + error.message, "error");
   }
 }
 
@@ -1089,12 +1935,260 @@ async function createMovimientosSheet() {
       // Autoajustar columnas
       sheet.getUsedRange().format.autofitColumns();
       
+      // Agregar validación de datos para las columnas de fecha
+      // ValueDate está en la columna E (índice 4)
+      const valueDateColumn = sheet.getRange("E2:E1048576");
+      const valueDateValidation = valueDateColumn.dataValidation;
+      valueDateValidation.rule = {
+        date: {
+          operator: Excel.DataValidationOperator.greaterThan,
+          formula1: "1900-01-01"
+        }
+      };
+      valueDateValidation.prompt = {
+        message: "Ingrese una fecha válida (formato: dd/mm/yyyy)",
+        showPrompt: true,
+        title: "Fecha de valor"
+      };
+      valueDateValidation.errorAlert = {
+        message: "Debe ingresar una fecha válida",
+        showAlert: true,
+        style: Excel.DataValidationAlertStyle.stop,
+        title: "Fecha inválida"
+      };
+      
+      // TrnDate está en la columna G (índice 6)
+      const trnDateColumn = sheet.getRange("G2:G1048576");
+      const trnDateValidation = trnDateColumn.dataValidation;
+      trnDateValidation.rule = {
+        date: {
+          operator: Excel.DataValidationOperator.greaterThan,
+          formula1: "1900-01-01"
+        }
+      };
+      trnDateValidation.prompt = {
+        message: "Ingrese una fecha válida (formato: dd/mm/yyyy)",
+        showPrompt: true,
+        title: "Fecha de transacción"
+      };
+      trnDateValidation.errorAlert = {
+        message: "Debe ingresar una fecha válida",
+        showAlert: true,
+        style: Excel.DataValidationAlertStyle.stop,
+        title: "Fecha inválida"
+      };
+      
+      // Agregar dropdown para la columna Account (columna J, índice 9)
+      if (cachedAccounts && cachedAccounts.length > 0) {
+        const accountColumn = sheet.getRange("J2:J1048576");
+        const accountValidation = accountColumn.dataValidation;
+        
+        // Crear la lista de valores separados por comas (solo los códigos de cuenta)
+        const accountCodes = cachedAccounts.map(acc => acc.Code).join(",");
+        
+        accountValidation.rule = {
+          list: {
+            inCellDropDown: true,
+            source: accountCodes
+          }
+        };
+        accountValidation.prompt = {
+          message: "Seleccione una cuenta de la lista",
+          showPrompt: true,
+          title: "Cuenta contable"
+        };
+        accountValidation.errorAlert = {
+          message: "Debe seleccionar una cuenta válida de la lista",
+          showAlert: true,
+          style: Excel.DataValidationAlertStyle.stop,
+          title: "Cuenta inválida"
+        };
+        
+        console.log(`Dropdown de cuentas configurado con ${cachedAccounts.length} cuentas`);
+      } else {
+        console.warn("No hay cuentas en caché. Descargue las cuentas primero para habilitar el dropdown.");
+      }
+      
+      // Agregar dropdown para la columna BudgetCode (columna K, índice 10)
+      if (cachedBudgetCodes && cachedBudgetCodes.length > 0) {
+        const budgetCodeColumn = sheet.getRange("K2:K1048576");
+        const budgetCodeValidation = budgetCodeColumn.dataValidation;
+        
+        const budgetCodes = cachedBudgetCodes.map(bc => bc.Code).join(",");
+        
+        budgetCodeValidation.rule = {
+          list: {
+            inCellDropDown: true,
+            source: budgetCodes
+          }
+        };
+        budgetCodeValidation.prompt = {
+          message: "Seleccione un código presupuestario de la lista",
+          showPrompt: true,
+          title: "Código presupuestario"
+        };
+        budgetCodeValidation.errorAlert = {
+          message: "Debe seleccionar un código presupuestario válido de la lista",
+          showAlert: true,
+          style: Excel.DataValidationAlertStyle.warning,
+          title: "Código presupuestario inválido"
+        };
+        
+        console.log(`Dropdown de códigos presupuestarios configurado con ${cachedBudgetCodes.length} códigos`);
+      }
+      
+      // Agregar dropdown para la columna FlowCode (columna L, índice 11)
+      if (cachedFlowCodes && cachedFlowCodes.length > 0) {
+        const flowCodeColumn = sheet.getRange("L2:L1048576");
+        const flowCodeValidation = flowCodeColumn.dataValidation;
+        
+        const flowCodes = cachedFlowCodes.map(fc => fc.Code).join(",");
+        
+        flowCodeValidation.rule = {
+          list: {
+            inCellDropDown: true,
+            source: flowCodes
+          }
+        };
+        flowCodeValidation.prompt = {
+          message: "Seleccione un flujo de caja de la lista",
+          showPrompt: true,
+          title: "Flujo de caja"
+        };
+        flowCodeValidation.errorAlert = {
+          message: "Debe seleccionar un flujo de caja válido de la lista",
+          showAlert: true,
+          style: Excel.DataValidationAlertStyle.warning,
+          title: "Flujo de caja inválido"
+        };
+        
+        console.log(`Dropdown de flujos de caja configurado con ${cachedFlowCodes.length} flujos`);
+      }
+      
+      // Agregar dropdown para la columna TrnCurrency (columna M, índice 12)
+      if (cachedCurrencies && cachedCurrencies.length > 0) {
+        const currencyColumn = sheet.getRange("M2:M1048576");
+        const currencyValidation = currencyColumn.dataValidation;
+        
+        // Crear la lista de códigos de divisa separados por comas
+        const currencyCodes = cachedCurrencies.map(c => c.Code).join(",");
+        
+        currencyValidation.rule = {
+          list: {
+            inCellDropDown: true,
+            source: currencyCodes
+          }
+        };
+        currencyValidation.prompt = {
+          message: "Seleccione una divisa de la lista",
+          showPrompt: true,
+          title: "Divisa de transacción"
+        };
+        currencyValidation.errorAlert = {
+          message: "Debe seleccionar una divisa válida",
+          showAlert: true,
+          style: Excel.DataValidationAlertStyle.warning,
+          title: "Divisa inválida"
+        };
+        
+        console.log(`Dropdown de divisas configurado con ${cachedCurrencies.length} divisas`);
+      } else {
+        console.warn("No hay divisas en caché. Descargue las divisas primero para habilitar el dropdown.");
+      }
+      
+      // Agregar dropdown para la columna QuotationPlace (columna N, índice 13)
+      if (cachedQuotationPlaces && cachedQuotationPlaces.length > 0) {
+        const quotationPlaceColumn = sheet.getRange("N2:N1048576");
+        const quotationPlaceValidation = quotationPlaceColumn.dataValidation;
+        
+        // Crear la lista de descripciones de lugares de cotización separadas por comas
+        const quotationDescriptions = cachedQuotationPlaces.map(qp => qp.Description).join(",");
+        
+        quotationPlaceValidation.rule = {
+          list: {
+            inCellDropDown: true,
+            source: quotationDescriptions
+          }
+        };
+        quotationPlaceValidation.prompt = {
+          message: "Seleccione una opción de cotización",
+          showPrompt: true,
+          title: "Lugar de cotización"
+        };
+        quotationPlaceValidation.errorAlert = {
+          message: "Debe seleccionar un lugar de cotización válido",
+          showAlert: true,
+          style: Excel.DataValidationAlertStyle.warning,
+          title: "Lugar de cotización inválido"
+        };
+        
+        console.log(`Dropdown de lugares de cotización configurado con ${cachedQuotationPlaces.length} lugares`);
+      } else {
+        console.warn("No hay lugares de cotización en caché. Descargue primero para habilitar el dropdown.");
+      }
+      
+      // Agregar dropdown para Status (columna B, índice 1)
+      const statusColumn = sheet.getRange("B2:B1048576");
+      const statusValidation = statusColumn.dataValidation;
+      statusValidation.rule = {
+        list: {
+          inCellDropDown: true,
+          source: "Actual,Forecast,Historical"
+        }
+      };
+      statusValidation.prompt = {
+        message: "Seleccione el estado del movimiento (Actual es el más común)",
+        showPrompt: true,
+        title: "Estado del movimiento"
+      };
+      statusValidation.errorAlert = {
+        message: "Debe seleccionar un estado válido: Actual, Forecast o Historical",
+        showAlert: true,
+        style: Excel.DataValidationAlertStyle.stop,
+        title: "Estado inválido"
+      };
+      console.log("Dropdown de Status configurado con valores: Actual, Forecast, Historical");
+
+      // Agregar dropdowns booleanos (true/false) para múltiples columnas
+      const booleanColumns = [
+        { range: "C2:C1048576", name: "IsDebit", title: "¿Es débito?" },
+        { range: "O2:O1048576", name: "UseInBalanceVal", title: "¿Usar en balance de valor?" },
+        { range: "P2:P1048576", name: "UseInBalanceTrn", title: "¿Usar en balance de transacción?" },
+        { range: "Q2:Q1048576", name: "Interco", title: "¿Es intercompañía?" },
+        { range: "R2:R1048576", name: "UseIntercoChart", title: "¿Usar plan intercompañía?" },
+        { range: "S2:S1048576", name: "IsManualFee", title: "¿Es comisión manual?" }
+      ];
+      
+      booleanColumns.forEach(col => {
+        const column = sheet.getRange(col.range);
+        const validation = column.dataValidation;
+        validation.rule = {
+          list: {
+            inCellDropDown: true,
+            source: "true,false"
+          }
+        };
+        validation.prompt = {
+          message: "Seleccione true o false",
+          showPrompt: true,
+          title: col.title
+        };
+        validation.errorAlert = {
+          message: "Debe seleccionar true o false",
+          showAlert: true,
+          style: Excel.DataValidationAlertStyle.stop,
+          title: "Valor inválido"
+        };
+      });
+      
+      console.log("Todas las validaciones de datos configuradas correctamente");
+      
       // Activar la hoja
       sheet.activate();
       
       await context.sync();
       
-      showNotification("Hoja 'Movimientos' creada con las cabeceras correctamente", "success");
+      showNotification("Hoja 'Movimientos' creada con controles de validación", "success");
     });
   } catch (error) {
     console.error("Error al crear hoja de Movimientos:", error);

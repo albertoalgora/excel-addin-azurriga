@@ -729,55 +729,334 @@ const range = sheet.getRange(`A1:${endColumn}${numRows}`); // "A1:O51"
 
 ---
 
-### 9. Método `importData()` (Función de ejemplo)
+### 9. Funcionalidad de Importación de Movimientos
 
-**Función**: Ejemplo de cómo enviar datos desde Excel a un servidor
+**Función Principal**: `importMovimientosToOData()` - Importa movimientos contables desde Excel al servidor OData
+
+#### 9.1. Flujo de Importación
+
+```
+Usuario hace clic en botón "Import"
+        │
+        ▼
+importData() - Muestra modal de selección
+        │
+        ├─► Usuario selecciona "Crear hoja"
+        │   └─► executeCreateSheet()
+        │       ├─► Carga datos de referencia (Cuentas, Flujos, Presupuestos, Divisas, Cotizaciones)
+        │       └─► createMovimientosSheet() - Crea hoja con validaciones y dropdowns
+        │
+        └─► Usuario selecciona "Importar"
+            └─► executeImport()
+                └─► importMovimientosToOData()
+                    ├─► 1. Carga datos de referencia (si no están en caché)
+                    ├─► 2. Lee datos de la hoja "Movimientos"
+                    ├─► 3. Valida cada registro
+                    ├─► 4. Construye JSON en formato OData
+                    └─► 5. Envía POST al servidor
+```
+
+#### 9.2. Funciones de Importación
+
+##### 9.2.1. `importData()` - Modal de Importación
 
 ```javascript
 export async function importData() {
-  try {
-    await Excel.run(async (context) => {
-      // 1. Obtener datos de Excel
-      const sheet = context.workbook.worksheets.getActiveWorksheet();
-      const range = sheet.getRange("A1:B2");
-      range.load(["values"]);
-      await context.sync();
+  // Verifica autenticación
+  if (!userCredentials.isLoggedIn) {
+    showNotification("Debe iniciar sesión primero", "error");
+    return;
+  }
 
-      // 2. Preparar datos para enviar
-      const data = {
-        title: range.values[1][0] || "",
-        body: range.values[1][1] || "",
-        userId: 1
-      };
+  // Muestra modal con opciones:
+  // - Tipo: Flujos o Movimientos
+  // - Botón "Crear hoja": Genera plantilla con validaciones
+  // - Botón "Importar": Envía datos al servidor
+}
+```
 
-      // 3. Enviar a servidor de prueba
-      const response = await fetch('https://jsonplaceholder.typicode.com/posts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-      });
+##### 9.2.2. `readMovimientosSheet()` - Lectura de Datos
 
-      const result = await response.json();
+```javascript
+async function readMovimientosSheet() {
+  return await Excel.run(async (context) => {
+    const sheet = context.workbook.worksheets.getItem("Movimientos");
+    const usedRange = sheet.getUsedRange();
+    usedRange.load(["values", "rowCount"]);
+    await context.sync();
 
-      // 4. Crear hoja con resultado
-      const resultSheet = context.workbook.worksheets.add("Resultado");
-      const resultRange = resultSheet.getRange("A1:C2");
-      resultRange.values = [
-        ["ID", "Estado", "Fecha"],
-        [result.id, "Importado exitosamente", new Date().toLocaleString()]
-      ];
+    const values = usedRange.values;
+    const headers = values[0]; // Primera fila = cabeceras
+    const records = [];
 
-      await context.sync();
-      showNotification("¡Datos importados exitosamente!", "success");
-    });
-  } catch (error) {
-    console.error("Error:", error);
-    showNotification("Error al importar los datos", "error");
+    // Mapear cada fila a un objeto con los nombres de las cabeceras
+    for (let i = 1; i < values.length; i++) {
+      const row = values[i];
+      const record = {};
+      
+      for (let j = 0; j < headers.length; j++) {
+        const header = headers[j];
+        const value = row[j];
+        
+        if (value !== null && value !== undefined && value !== "") {
+          record[header] = value;
+        }
+      }
+      
+      if (Object.keys(record).length > 0) {
+        records.push(record);
+      }
+    }
+
+    return records;
+  });
+}
+```
+
+##### 9.2.3. `validateMovimientoRecord()` - Validación de Datos
+
+Valida cada registro según las reglas de negocio:
+
+| Campo | Validación | Obligatorio |
+|-------|-----------|-------------|
+| TERCERO | - | No (opcional) |
+| Status | Debe tener valor | Sí |
+| IsDebit | Debe tener valor (true/false) | Sí |
+| Amount | Distinto de 0 | Sí |
+| ValueDate | Formato dd/mm/yyyy o serial Excel | Sí |
+| TrnAmount | Distinto de 0 | Sí |
+| TrnDate | Formato dd/mm/yyyy o serial Excel | Sí |
+| Number | >= 1 | Sí |
+| Description | - | No |
+| Account | Código de cuenta válido | Sí |
+| BudgetCode | Código presupuestario válido | No |
+| FlowCode | Código de flujo válido | No |
+| TrnCurrency | Código de divisa válido | No |
+| QuotationPlace | Descripción válida | No |
+| UseInBalanceVal | true/false | Sí |
+| UseInBalanceTrn | true/false | Sí |
+| Interco | true/false | Sí |
+| UseIntercoChart | true/false | Sí |
+| IsManualFee | true/false | Sí |
+
+```javascript
+function validateMovimientoRecord(record, rowNumber) {
+  const errors = [];
+
+  // Validar campos obligatorios
+  if (!record.Status || record.Status.toString().trim() === "") {
+    errors.push(`Fila ${rowNumber}: El campo Status es obligatorio`);
+  }
+
+  if (record.IsDebit === null || record.IsDebit === undefined || record.IsDebit === "") {
+    errors.push(`Fila ${rowNumber}: El campo IsDebit es obligatorio`);
+  }
+
+  if (!record.Amount || parseFloat(record.Amount) === 0) {
+    errors.push(`Fila ${rowNumber}: El campo Amount debe ser distinto de 0`);
+  }
+
+  // ... más validaciones
+
+  return {
+    isValid: errors.length === 0,
+    errors: errors
+  };
+}
+```
+
+##### 9.2.4. `buildMovimientoJSON()` - Construcción del Payload
+
+Construye el JSON en el formato requerido por el servidor OData:
+
+```javascript
+function buildMovimientoJSON(record) {
+  const payload = {};
+
+  // Campo opcional TERCERO - solo si tiene valor
+  if (record.TERCERO && record.TERCERO.toString().trim() !== "") {
+    payload.TERCERO = record.TERCERO.toString().trim();
+  }
+
+  // Objeto Entity con todos los campos
+  payload.Entity = {
+    Status: record.Status.toString(),
+    IsDebit: parseBooleanField(record.IsDebit),
+    Amount: parseFloat(record.Amount),
+    ValueDate: convertToISO8601(record.ValueDate),
+    TrnAmount: parseFloat(record.TrnAmount),
+    TrnDate: convertToISO8601(record.TrnDate),
+    Number: parseInt(record.Number),
+    UseInBalanceVal: parseBooleanField(record.UseInBalanceVal),
+    UseInBalanceTrn: parseBooleanField(record.UseInBalanceTrn),
+    Interco: parseBooleanField(record.Interco),
+    UseIntercoChart: parseBooleanField(record.UseIntercoChart),
+    IsManualFee: parseBooleanField(record.IsManualFee)
+  };
+
+  // Descripción opcional
+  if (record.Description) {
+    payload.Entity.Description = record.Description.toString();
+  }
+
+  // Mapear códigos a IDs usando cachés
+  const accountCode = record.Account.toString().trim();
+  const account = cachedAccounts.find(acc => acc.Code === accountCode);
+  if (account) {
+    payload.Entity["Account@odata.bind"] = `Account2CashSet(${account.Id})`;
+  }
+
+  // ... mapeos similares para BudgetCode, FlowCode, TrnCurrency, QuotationPlace
+
+  return payload;
+}
+```
+
+**Ejemplo de JSON generado:**
+
+```json
+{
+  "TERCERO": "PRUEBA",
+  "Entity": {
+    "Status": "Actual",
+    "IsDebit": false,
+    "Amount": 1000.00,
+    "ValueDate": "2024-11-02T00:00:00Z",
+    "TrnAmount": 1000.00,
+    "TrnDate": "2024-11-02T00:00:00Z",
+    "Number": 1,
+    "Description": "Flujo de caja de prueba",
+    "Account@odata.bind": "Account2CashSet(779207962189118902)",
+    "BudgetCode@odata.bind": "BudgetCodeSet(113)",
+    "FlowCode@odata.bind": "FlowCodeSet(131)",
+    "TrnCurrency@odata.bind": "CurrencySet('EUR')",
+    "QuotationPlace@odata.bind": "QuotationPlaceSet(1)",
+    "UseInBalanceVal": true,
+    "UseInBalanceTrn": true,
+    "Interco": false,
+    "UseIntercoChart": false,
+    "IsManualFee": false
   }
 }
 ```
 
-**Nota**: Esta función es un ejemplo que usa un servidor de prueba (jsonplaceholder). No se usa en producción, pero muestra cómo enviar datos desde Excel a un servidor.
+##### 9.2.5. `importMovimientosToOData()` - Envío al Servidor
+
+```javascript
+async function importMovimientosToOData() {
+  try {
+    // 1. Cargar datos de referencia
+    await Promise.all([
+      loadAccounts(),
+      loadFlowCodes(),
+      loadBudgetCodes(),
+      loadCurrencies(),
+      loadQuotationPlaces()
+    ]);
+
+    // 2. Leer datos de la hoja
+    const records = await readMovimientosSheet();
+
+    // 3. Validar todos los registros
+    const validationResults = records.map((record, index) => 
+      validateMovimientoRecord(record, index + 2)
+    );
+
+    const allErrors = validationResults.flatMap(result => result.errors);
+    
+    if (allErrors.length > 0) {
+      showNotification(`Validación fallida: ${allErrors.length} errores`, "error");
+      return;
+    }
+
+    // 4. Enviar al servidor (un solo registro por ahora)
+    if (records.length === 1) {
+      const payload = buildMovimientoJSON(records[0]);
+
+      const endpoint = `${VERCEL_PROXY}CashFlowDtoWithExtendersSet`;
+
+      const response = await authenticatedFetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json; charset=utf-8',
+          'Accept': 'application/json; charset=utf-8'
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (response.ok) {
+        showNotification("Movimiento importado exitosamente", "success");
+      } else {
+        const errorText = await response.text();
+        showNotification(`Error al importar: ${response.status}`, "error");
+      }
+    }
+  } catch (error) {
+    console.error("Error durante la importación:", error);
+    showNotification("Error: " + error.message, "error");
+  }
+}
+```
+
+#### 9.3. Funciones Auxiliares de Importación
+
+##### `loadCurrencies()` - Carga de Divisas
+
+```javascript
+async function loadCurrencies() {
+  const endpoint = `${VERCEL_PROXY}CurrencySet?$select=Code,Id`;
+  const response = await authenticatedFetch(endpoint);
+  const data = await response.json();
+  cachedCurrencies = data.value;
+}
+```
+
+##### `loadQuotationPlaces()` - Carga de Lugares de Cotización
+
+```javascript
+async function loadQuotationPlaces() {
+  const endpoint = `${VERCEL_PROXY}QuotationPlaceSet?$select=Id,Description`;
+  const response = await authenticatedFetch(endpoint);
+  const data = await response.json();
+  cachedQuotationPlaces = data.value;
+}
+```
+
+##### `convertToISO8601()` - Conversión de Fechas
+
+Convierte fechas de Excel (número serial o dd/mm/yyyy) a formato ISO 8601:
+
+```javascript
+function convertToISO8601(dateValue) {
+  let date;
+
+  // Si es número serial de Excel
+  if (typeof dateValue === 'number') {
+    const excelEpoch = new Date(1899, 11, 30);
+    const msPerDay = 24 * 60 * 60 * 1000;
+    date = new Date(excelEpoch.getTime() + dateValue * msPerDay);
+  } 
+  // Si es string dd/mm/yyyy
+  else if (typeof dateValue === 'string') {
+    const parts = dateValue.split('/');
+    const day = parseInt(parts[0]);
+    const month = parseInt(parts[1]) - 1;
+    const year = parseInt(parts[2]);
+    date = new Date(year, month, day);
+  }
+
+  return date.toISOString().split('.')[0] + 'Z';
+}
+```
+
+#### 9.4. Endpoint de Importación
+
+**URL**: `https://azprod.azurriga.com:1035/odata/CashFlowDtoWithExtendersSet`  
+**Método**: POST  
+**Headers**:
+- Authorization: Basic (Base64 de username:password)
+- Content-Type: application/json; charset=utf-8
+- Accept: application/json; charset=utf-8
 
 ---
 
@@ -789,7 +1068,7 @@ ExcelRestAdding/
 ├── src/                          # Código fuente
 │   ├── taskpane/
 │   │   ├── taskpane.html        # Interfaz de usuario principal
-│   │   ├── taskpane.js          # Lógica de negocio (690 líneas)
+│   │   ├── taskpane.js          # Lógica de negocio (1900+ líneas)
 │   │   └── taskpane.css         # Estilos CSS
 │   │
 │   └── commands/
@@ -1400,6 +1679,432 @@ try {
 5. **Modo offline**:
    - Service Workers para caché
    - IndexedDB para almacenamiento local
+
+---
+
+## 10. Historias de Usuario - Importación de Movimientos
+
+### Historia de Usuario 1: Envío de un Movimiento al Servidor OData
+
+**Objetivo**: Importar un único movimiento contable desde la hoja "Movimientos" al servidor OData.
+
+#### 10.1. Flujo de Trabajo
+
+```
+Usuario hace clic en "Importar"
+         │
+         ▼
+   ¿Hoja "Movimientos" existe?
+         │
+    No ──┴── Sí
+    │         │
+    │         ▼
+    │   Cargar datos de referencia
+    │   (Cuentas, Flujos, Presupuestos, Divisas, Cotizaciones)
+    │         │
+    │         ▼
+    │   Leer datos de la hoja (fila 2)
+    │         │
+    │         ▼
+    │   Validar 19 campos obligatorios y opcionales
+    │         │
+    │    ¿Válido? ──No──► Marcar celdas con borde rojo
+    │         │            Mostrar panel de errores con detalles
+    │        Sí            Return
+    │         │
+    │         ▼
+    │   Construir payload JSON con buildMovimientoJSON()
+    │         │
+    │         ▼
+    │   POST a CashFlowDtoWithExtendersSet
+    │         │
+    │    ¿200 OK? ──No──► Mostrar error detallado con sugerencias
+    │         │
+    │        Sí
+    │         ▼
+    └──► ✅ Notificación de éxito
+```
+
+#### 10.2. Validaciones Implementadas
+
+| Campo | Tipo | Validación | Mensaje de Error |
+|-------|------|------------|------------------|
+| Status | String | Requerido, valores: "Actual", "Forecast", "Historical" | "El campo Status es obligatorio" |
+| IsDebit | Boolean | Requerido, true/false | "El campo IsDebit es obligatorio" |
+| Amount | Number | Requerido, > 0 | "El campo Amount es obligatorio y debe ser mayor que 0" |
+| ValueDate | Date | Requerido, formato dd/mm/yyyy o serial Excel | "El campo ValueDate es obligatorio y debe ser una fecha válida" |
+| TrnAmount | Number | Requerido, > 0 | "El campo TrnAmount es obligatorio y debe ser mayor que 0" |
+| TrnDate | Date | Requerido, formato dd/mm/yyyy o serial Excel | "El campo TrnDate es obligatorio y debe ser una fecha válida" |
+| Number | Integer | Requerido, > 0 | "El campo Number es obligatorio y debe ser mayor que 0" |
+| Account | String | Requerido, debe existir en AccountSet | "El campo Account es obligatorio" |
+| BudgetCode | String | Opcional, debe existir en BudgetCodeSet si se proporciona | - |
+| FlowCode | String | Opcional, debe existir en FlowCodeSet si se proporciona | - |
+| TrnCurrency | String | Opcional, debe existir en CurrencySet si se proporciona | - |
+| QuotationPlace | String | Opcional, debe existir en QuotationPlaceSet si se proporciona | - |
+| UseInBalanceVal | Boolean | Requerido, true/false | "El campo UseInBalanceVal es obligatorio" |
+| UseInBalanceTrn | Boolean | Requerido, true/false | "El campo UseInBalanceTrn es obligatorio" |
+| Interco | Boolean | Requerido, true/false | "El campo Interco es obligatorio" |
+| UseIntercoChart | Boolean | Requerido, true/false | "El campo UseIntercoChart es obligatorio" |
+| IsManualFee | Boolean | Requerido, true/false | "El campo IsManualFee es obligatorio" |
+| TERCERO | String | Opcional | - |
+| Description | String | Opcional | - |
+
+#### 10.3. Estructura del Payload JSON (Único Registro)
+
+```json
+{
+  "TERCERO": "PRUEBA_001",
+  "Entity": {
+    "Status": "Actual",
+    "IsDebit": false,
+    "Amount": 1000.00,
+    "ValueDate": "2024-11-02T00:00:00Z",
+    "TrnAmount": 1000.00,
+    "TrnDate": "2024-11-02T00:00:00Z",
+    "Number": 1,
+    "Description": "Movimiento de prueba",
+    "Account@odata.bind": "Account2CashSet(779207962189118902)",
+    "BudgetCode@odata.bind": "BudgetCodeSet(113)",
+    "FlowCode@odata.bind": "FlowCodeSet(131)",
+    "TrnCurrency@odata.bind": "CurrencySet('EUR')",
+    "QuotationPlace@odata.bind": "QuotationPlaceSet(1)",
+    "UseInBalanceVal": true,
+    "UseInBalanceTrn": true,
+    "Interco": false,
+    "UseIntercoChart": false,
+    "IsManualFee": false
+  }
+}
+```
+
+**Nota**: El campo `TERCERO` solo se incluye si tiene valor en el Excel.
+
+#### 10.4. Endpoint y Configuración
+
+**URL**: `https://azprod.azurriga.com:1035/odata/CashFlowDtoWithExtendersSet`  
+**Método**: `POST`  
+**Headers**:
+```
+Authorization: Basic <base64(username:password)>
+Content-Type: application/json; charset=utf-8
+Accept: application/json; charset=utf-8
+```
+
+#### 10.5. Funciones Clave
+
+##### `buildMovimientoJSON(record)`
+
+Construye el payload JSON individual a partir de un registro de Excel:
+
+```javascript
+function buildMovimientoJSON(record) {
+  const payload = {};
+
+  // TERCERO opcional
+  if (record.TERCERO && record.TERCERO.toString().trim() !== "") {
+    payload.TERCERO = record.TERCERO.toString().trim();
+  }
+
+  // Entity con todos los campos
+  payload.Entity = {
+    Status: record.Status.toString(),
+    IsDebit: parseBooleanField(record.IsDebit),
+    Amount: parseFloat(record.Amount),
+    ValueDate: convertToISO8601(record.ValueDate),
+    TrnAmount: parseFloat(record.TrnAmount),
+    TrnDate: convertToISO8601(record.TrnDate),
+    Number: parseInt(record.Number),
+    UseInBalanceVal: parseBooleanField(record.UseInBalanceVal),
+    UseInBalanceTrn: parseBooleanField(record.UseInBalanceTrn),
+    Interco: parseBooleanField(record.Interco),
+    UseIntercoChart: parseBooleanField(record.UseIntercoChart),
+    IsManualFee: parseBooleanField(record.IsManualFee)
+  };
+
+  // Descripción opcional
+  if (record.Description) {
+    payload.Entity.Description = record.Description.toString();
+  }
+
+  // Referencias @odata.bind
+  const accountCode = record.Account.toString().trim();
+  const account = cachedAccounts.find(acc => acc.Code === accountCode);
+  if (account) {
+    payload.Entity["Account@odata.bind"] = `Account2CashSet(${account.Id})`;
+  }
+
+  // ... (mapeo de FlowCode, BudgetCode, TrnCurrency, QuotationPlace)
+
+  return payload;
+}
+```
+
+##### `markErrorCells(validationResults)`
+
+Marca las celdas con errores con borde rojo:
+
+```javascript
+async function markErrorCells(validationResults) {
+  await Excel.run(async (context) => {
+    const sheet = context.workbook.worksheets.getItem("Movimientos");
+    
+    validationResults.forEach(result => {
+      if (!result.isValid && result.errorFields.length > 0) {
+        result.errorFields.forEach(fieldName => {
+          const columnIndex = headers.indexOf(fieldName);
+          const cellAddress = `${String.fromCharCode(65 + columnIndex)}${result.rowNumber}`;
+          
+          const errorCell = sheet.getRange(cellAddress);
+          ["EdgeTop", "EdgeBottom", "EdgeLeft", "EdgeRight"].forEach(edge => {
+            const border = errorCell.format.borders.getItem(edge);
+            border.style = "Continuous";
+            border.color = "#CC0000";
+          });
+        });
+      }
+    });
+    
+    await context.sync();
+  });
+}
+```
+
+---
+
+### Historia de Usuario 2: Envío de Múltiples Movimientos (Batch)
+
+**Objetivo**: Importar múltiples movimientos contables en un solo request usando OData $batch.
+
+#### 10.6. Flujo de Trabajo para Batch
+
+```
+Usuario hace clic en "Importar"
+         │
+         ▼
+   ¿Hoja "Movimientos" existe?
+         │
+         ▼
+   Cargar datos de referencia
+         │
+         ▼
+   Leer TODOS los datos de la hoja (filas 2+)
+         │
+         ▼
+   Validar TODOS los registros
+         │
+    ¿Todos válidos? ──No──► Marcar celdas con errores
+         │                  Mostrar panel con detalles por fila
+        Sí                  Return
+         │
+         ▼
+   ¿Cantidad de registros?
+         │
+    1 registro ──► POST individual (HU1)
+         │
+    2+ registros
+         │
+         ▼
+   Construir batch request con buildBatchRequestJSON()
+         │
+         ▼
+   POST a $batch
+         │
+         ▼
+   Analizar respuestas individuales
+         │
+    ¿Todos exitosos?
+         │
+    No ──┴── Sí
+    │         │
+    │         ▼
+    │    ✅ Notificación: "X movimientos importados"
+    │
+    ▼
+   Mostrar panel con:
+   - Exitosos: X
+   - Fallidos: Y
+   - Detalles por registro
+```
+
+#### 10.7. Estructura del Batch Request
+
+```json
+{
+  "requests": [
+    {
+      "id": "1",
+      "method": "POST",
+      "url": "CashFlowDtoWithExtendersSet",
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "body": {
+        "TERCERO": "PRUEBA_001",
+        "Entity": {
+          "Status": "Actual",
+          "IsDebit": false,
+          "Amount": 1000.00,
+          "ValueDate": "2024-11-02T00:00:00Z",
+          "TrnAmount": 1000.00,
+          "TrnDate": "2024-11-02T00:00:00Z",
+          "Number": 1,
+          "Description": "Carga Lote - Reg 1",
+          "Account@odata.bind": "Account2CashSet(779207962189118902)",
+          "BudgetCode@odata.bind": "BudgetCodeSet(113)",
+          "FlowCode@odata.bind": "FlowCodeSet(131)",
+          "TrnCurrency@odata.bind": "CurrencySet('EUR')",
+          "QuotationPlace@odata.bind": "QuotationPlaceSet(1)",
+          "UseInBalanceVal": true,
+          "UseInBalanceTrn": true,
+          "Interco": false,
+          "UseIntercoChart": false,
+          "IsManualFee": false
+        }
+      }
+    },
+    {
+      "id": "2",
+      "method": "POST",
+      "url": "CashFlowDtoWithExtendersSet",
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "body": {
+        "TERCERO": "PRUEBA_002",
+        "Entity": {
+          "Status": "Actual",
+          "IsDebit": false,
+          "Amount": 2000.00,
+          "ValueDate": "2024-11-03T00:00:00Z",
+          "TrnAmount": 2000.00,
+          "TrnDate": "2024-11-03T00:00:00Z",
+          "Number": 2,
+          "Description": "Carga Lote - Reg 2",
+          "Account@odata.bind": "Account2CashSet(779207962189118902)",
+          "BudgetCode@odata.bind": "BudgetCodeSet(113)",
+          "FlowCode@odata.bind": "FlowCodeSet(131)",
+          "TrnCurrency@odata.bind": "CurrencySet('EUR')",
+          "QuotationPlace@odata.bind": "QuotationPlaceSet(1)",
+          "UseInBalanceVal": true,
+          "UseInBalanceTrn": true,
+          "Interco": false,
+          "UseIntercoChart": false,
+          "IsManualFee": false
+        }
+      }
+    }
+  ]
+}
+```
+
+#### 10.8. Función `buildBatchRequestJSON(records)`
+
+Construye el request batch a partir de múltiples registros:
+
+```javascript
+function buildBatchRequestJSON(records) {
+  const requests = records.map((record, index) => {
+    // Construir el payload individual usando la función existente
+    const payload = buildMovimientoJSON(record);
+    
+    return {
+      id: String(index + 1),
+      method: "POST",
+      url: "CashFlowDtoWithExtendersSet",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: payload
+    };
+  });
+  
+  return { requests };
+}
+```
+
+#### 10.9. Endpoint de Batch
+
+**URL**: `https://azprod.azurriga.com:1035/odata/$batch`  
+**Método**: `POST`  
+**Headers**:
+```
+Authorization: Basic <base64(username:password)>
+Content-Type: application/json; charset=utf-8
+Accept: application/json; charset=utf-8
+```
+
+#### 10.10. Análisis de Respuesta Batch
+
+La respuesta del servidor tiene el formato:
+
+```json
+{
+  "responses": [
+    {
+      "id": "1",
+      "status": 201,
+      "body": {
+        "Id": "779207962189118903",
+        "Status": "Actual",
+        ...
+      }
+    },
+    {
+      "id": "2",
+      "status": 400,
+      "body": {
+        "error": {
+          "code": "InvalidField",
+          "message": "El campo Account no es válido"
+        }
+      }
+    }
+  ]
+}
+```
+
+**Procesamiento en código**:
+
+```javascript
+const responses = result.responses || [];
+const successCount = responses.filter(r => r.status >= 200 && r.status < 300).length;
+const errorCount = responses.length - successCount;
+
+if (errorCount === 0) {
+  showNotification(`✅ ${successCount} movimientos importados exitosamente`, "success");
+} else {
+  let errorMessage = `⚠️ Importación parcial:\n\n`;
+  errorMessage += `✅ Exitosos: ${successCount}\n`;
+  errorMessage += `❌ Fallidos: ${errorCount}\n\n`;
+  errorMessage += `Detalles de errores:\n`;
+  
+  responses.forEach((resp, idx) => {
+    if (resp.status >= 300) {
+      errorMessage += `\n• Registro ${idx + 1} (fila ${idx + 2}): Error ${resp.status}\n`;
+      if (resp.body && resp.body.error) {
+        errorMessage += `  ${resp.body.error.message}\n`;
+      }
+    }
+  });
+  
+  showErrorDetails(errorMessage);
+}
+```
+
+#### 10.11. Ventajas del Batch Request
+
+1. **Eficiencia de red**: Una sola conexión HTTP en lugar de N conexiones
+2. **Transaccionalidad**: El servidor puede procesar todas las operaciones en un contexto
+3. **Rendimiento**: Reducción de overhead de HTTP/TCP
+4. **Feedback detallado**: Conocer qué registros fallaron y por qué
+5. **Escalabilidad**: Permite importar 100, 1000 o más registros en una sola operación
+
+#### 10.12. Limitaciones y Consideraciones
+
+- **Tamaño del batch**: Considerar límites del servidor (típicamente 1000-5000 registros)
+- **Timeout**: Requests largos pueden agotar el timeout (considerar dividir en chunks)
+- **Memoria**: Construir payloads muy grandes puede consumir mucha RAM en el navegador
+- **Rollback**: OData batch no garantiza atomicidad completa (depende del servidor)
 
 ---
 
