@@ -1219,8 +1219,8 @@ async function executeCreateSheet() {
 
     console.log("Creando hoja para tipo:", importType);
 
-    // Cerrar el modal
-    document.getElementById("importModal").classList.add("hidden");
+    // No cerrar el modal - permitir múltiples operaciones
+    // El modal solo se cierra con el botón Cancelar
 
     // Crear la hoja según el tipo
     if (importType === "movimientos") {
@@ -1270,8 +1270,8 @@ async function executeImport() {
 
     console.log("Importación de tipo:", importType);
 
-    // Cerrar el modal
-    document.getElementById("importModal").classList.add("hidden");
+    // No cerrar el modal - permitir múltiples operaciones
+    // El modal solo se cierra con el botón Cancelar
 
     // Ejecutar importación según el tipo
     if (importType === "movimientos") {
@@ -1406,6 +1406,30 @@ function validateMovimientoRecord(record, rowNumber) {
   if (!record.Account || record.Account.toString().trim() === "") {
     errors.push(`Fila ${rowNumber}: El campo Account es obligatorio`);
     errorFields.push('Account');
+  }
+
+  // Validar BudgetCode (requerido)
+  if (!record.BudgetCode || record.BudgetCode.toString().trim() === "") {
+    errors.push(`Fila ${rowNumber}: El campo BudgetCode es obligatorio`);
+    errorFields.push('BudgetCode');
+  }
+
+  // Validar FlowCode (requerido)
+  if (!record.FlowCode || record.FlowCode.toString().trim() === "") {
+    errors.push(`Fila ${rowNumber}: El campo FlowCode es obligatorio`);
+    errorFields.push('FlowCode');
+  }
+
+  // Validar TrnCurrency (requerido)
+  if (!record.TrnCurrency || record.TrnCurrency.toString().trim() === "") {
+    errors.push(`Fila ${rowNumber}: El campo TrnCurrency es obligatorio`);
+    errorFields.push('TrnCurrency');
+  }
+
+  // Validar QuotationPlace (requerido)
+  if (!record.QuotationPlace || record.QuotationPlace.toString().trim() === "") {
+    errors.push(`Fila ${rowNumber}: El campo QuotationPlace es obligatorio`);
+    errorFields.push('QuotationPlace');
   }
 
   // Validar campos booleanos requeridos
