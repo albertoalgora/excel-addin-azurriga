@@ -15,14 +15,27 @@
 
     <!-- Error handler global -->
     <script type="text/javascript">
-        // Timeout de seguridad - si después de 10 segundos no se cargó, mostrar error
+        // Detectar plataforma
+        var isDesktop = false;
+        try {
+            if (typeof Office !== 'undefined' && Office.context && Office.context.platform) {
+                isDesktop = Office.context.platform === Office.PlatformType.PC || 
+                           Office.context.platform === Office.PlatformType.Mac;
+            }
+        } catch(e) {
+            console.log("No se pudo detectar plataforma:", e);
+        }
+        
+        // Timeout de seguridad - si después de 15 segundos no se cargó, mostrar error
+        // Desktop necesita más tiempo que Online
+        var timeoutDuration = isDesktop ? 15000 : 10000;
         setTimeout(function() {
             var loadingScreen = document.getElementById('loading-screen');
             if (loadingScreen && loadingScreen.style.display !== 'none') {
-                console.error('Timeout: Add-in no se inicializó después de 10 segundos');
-                loadingScreen.innerHTML = '<div style="padding:20px;color:#a4262c;text-align:center;"><h3>⚠️ Error de Carga</h3><p>El complemento no pudo inicializarse correctamente.</p><p style="font-size:14px;margin-top:15px;">Posibles causas:</p><ul style="text-align:left;font-size:12px;"><li>Office.js no se cargó</li><li>Error en el código JavaScript</li><li>Problema de red</li></ul><button onclick="location.reload()" style="margin-top:15px;padding:8px 16px;background:#0078d4;color:white;border:none;border-radius:2px;cursor:pointer;">Recargar</button><p style="font-size:11px;margin-top:15px;color:#666;">Presiona F12 para ver detalles en la consola</p></div>';
+                console.error('Timeout: Add-in no se inicializó después de ' + (timeoutDuration/1000) + ' segundos');
+                loadingScreen.innerHTML = '<div style="padding:20px;color:#a4262c;text-align:center;"><h3>⚠️ Error de Carga</h3><p>El complemento no pudo inicializarse correctamente.</p><p style="font-size:14px;margin-top:15px;">Posibles causas:</p><ul style="text-align:left;font-size:12px;"><li>Office.js no se cargó</li><li>Error en el código JavaScript</li><li>Problema de red o firewall</li><li>Excel Desktop: Caché corrupta</li></ul><button onclick="location.reload()" style="margin-top:15px;padding:8px 16px;background:#0078d4;color:white;border:none;border-radius:2px;cursor:pointer;">Recargar</button><p style="font-size:11px;margin-top:15px;color:#666;">Presiona F12 para ver detalles en la consola</p></div>';
             }
-        }, 10000);
+        }, timeoutDuration);
         
         window.addEventListener('error', function(e) {
             console.error('Error global capturado:', e.error);
@@ -49,8 +62,28 @@
     <div id="loading-screen" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: white; display: flex; align-items: center; justify-content: center; z-index: 9999;">
         <div style="text-align: center;">
             <div style="border: 4px solid #f3f3f3; border-top: 4px solid #0078d4; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto 15px;"></div>
-            <p>Inicializando Add-in Azurriga...</p>
-            <p style="font-size: 12px; color: #666;">Cargando Office.js</p>
+            <p style="font-size: 14px; font-weight: 500;">Inicializando Add-in Azurriga...</p>
+            <p style="font-size: 12px; color: #605e5c;">Cargando Office.js</p>
+            <p id="platform-info" style="font-size: 11px; color: #a19f9d; margin-top: 10px;"></p>
+            <script>
+                setTimeout(function() {
+                    var platformInfo = document.getElementById('platform-info');
+                    if (platformInfo) {
+                        try {
+                            if (typeof Office !== 'undefined' && Office.context) {
+                                var platform = Office.context.platform;
+                                var platformName = platform === Office.PlatformType.PC ? "Excel Desktop (Windows)" : 
+                                                 platform === Office.PlatformType.Mac ? "Excel Desktop (Mac)" :
+                                                 platform === Office.PlatformType.OfficeOnline ? "Excel Online" :
+                                                 "Excel (Plataforma desconocida)";
+                                platformInfo.textContent = platformName;
+                            }
+                        } catch(e) {
+                            console.log("No se pudo detectar plataforma:", e);
+                        }
+                    }
+                }, 500);
+            </script>
         </div>
     </div>
     <style>

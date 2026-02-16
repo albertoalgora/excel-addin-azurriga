@@ -60,13 +60,13 @@ let selectedDateFrom = null;
 let selectedDateTo = null;
 
 /**
- * Función de inicialización de Office.js
- * Se ejecuta cuando el entorno de Office está listo para interactuar
+ * Función de inicialización del add-in
+ * Maneja la inicialización una vez que Office y DOM están listos
  * @param {Object} info - Información sobre el host de Office
  */
-Office.onReady((info) => {
+function initializeAddin(info) {
   try {
-    console.log("Office.onReady ejecutado - Host:", info.host);
+    console.log("Inicializando add-in - Host:", info.host, "Platform:", Office.context.platform);
     
     if (info.host === Office.HostType.Excel) {
       console.log("Excel detectado correctamente");
@@ -127,13 +127,41 @@ Office.onReady((info) => {
     }
   }
   } catch (error) {
-    console.error("Error en Office.onReady:", error);
+    console.error("Error en initializeAddin:", error);
     const loadingScreen = document.getElementById("loading-screen");
     if (loadingScreen) {
       loadingScreen.innerHTML = '<div style="padding:20px;color:#a4262c;"><h3>Error de inicialización</h3><p>' + error.message + '</p><p style="font-size:12px;">Presiona F12 para ver detalles</p><button onclick="location.reload()">Recargar</button></div>';
     }
   }
+}
+
+/**
+ * Inicialización con Office.onReady (método moderno)
+ * Compatible con Excel Online y versiones recientes de Excel Desktop
+ */
+Office.onReady((info) => {
+  console.log("Office.onReady ejecutado");
+  
+  // Asegurar que el DOM esté cargado antes de inicializar
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      console.log("DOM cargado después de Office.onReady");
+      initializeAddin(info);
+    });
+  } else {
+    console.log("DOM ya estaba cargado");
+    initializeAddin(info);
+  }
 });
+
+/**
+ * Inicialización con Office.initialize (método legacy)
+ * Fallback para versiones antiguas de Excel Desktop
+ */
+Office.initialize = function(reason) {
+  console.log("Office.initialize ejecutado - Razón:", reason);
+  // Office.onReady se encargará de la inicialización
+};
 
 /**
  * Gestiona el proceso completo de autenticación del usuario
