@@ -231,7 +231,7 @@ export async function login() {
         const isDevelopment = window.location.hostname === 'localhost';
         const baseUrl = isDevelopment 
           ? '/odata/AccountSet?$top=1'
-          : 'https://excel-addin-azurriga.vercel.app/api/proxy?path=odata/AccountSet?$top=1';
+          : 'https://excel-addin-azurriga.vercel.app/api/proxy?path=odata/AccountSet%3F$top=1';
         
         console.log(`Usando proxy ${isDevelopment ? 'WEBPACK' : 'VERCEL'}: ${baseUrl}`);
         
