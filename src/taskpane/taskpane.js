@@ -65,14 +65,26 @@ let selectedDateTo = null;
  * @param {Object} info - Información sobre el host de Office
  */
 Office.onReady((info) => {
-  if (info.host === Office.HostType.Excel) {
-    document.getElementById("sideload-msg").classList.add("hidden");
-    document.getElementById("app-body").classList.remove("hidden");
+  try {
+    console.log("Office.onReady ejecutado - Host:", info.host);
     
-    // Agregar event listeners para los botones
-    document.getElementById("login").onclick = login;
-    document.getElementById("download").onclick = showDownloadModal;
-    document.getElementById("import").onclick = importData;
+    if (info.host === Office.HostType.Excel) {
+      console.log("Excel detectado correctamente");
+      
+      // Ocultar pantalla de carga
+      const loadingScreen = document.getElementById("loading-screen");
+      if (loadingScreen) {
+        loadingScreen.style.display = "none";
+        console.log("Pantalla de carga ocultada");
+      }
+      
+      document.getElementById("sideload-msg").classList.add("hidden");
+      document.getElementById("app-body").classList.remove("hidden");
+      
+      // Agregar event listeners para los botones
+      document.getElementById("login").onclick = login;
+      document.getElementById("download").onclick = showDownloadModal;
+      document.getElementById("import").onclick = importData;
     
     // Event listener para cambio de tipo de descarga
     document.getElementById("downloadType").onchange = function() {
@@ -105,6 +117,21 @@ Office.onReady((info) => {
     
     // Event listener para cerrar el panel de errores detallados
     document.getElementById("closeErrorDetails").onclick = hideErrorDetails;
+    
+    console.log("Add-in Azurriga inicializado correctamente");
+  } else {
+    console.warn("Host no es Excel:", info.host);
+    const loadingScreen = document.getElementById("loading-screen");
+    if (loadingScreen) {
+      loadingScreen.innerHTML = '<div style="padding:20px;color:#a4262c;"><h3>Error</h3><p>Este complemento solo funciona en Excel</p></div>';
+    }
+  }
+  } catch (error) {
+    console.error("Error en Office.onReady:", error);
+    const loadingScreen = document.getElementById("loading-screen");
+    if (loadingScreen) {
+      loadingScreen.innerHTML = '<div style="padding:20px;color:#a4262c;"><h3>Error de inicialización</h3><p>' + error.message + '</p><p style="font-size:12px;">Presiona F12 para ver detalles</p><button onclick="location.reload()">Recargar</button></div>';
+    }
   }
 });
 

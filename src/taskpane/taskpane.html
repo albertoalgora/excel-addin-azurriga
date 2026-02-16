@@ -13,6 +13,30 @@
     <!-- Office JavaScript API -->
     <script type="text/javascript" src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
 
+    <!-- Error handler global -->
+    <script type="text/javascript">
+        // Timeout de seguridad - si después de 10 segundos no se cargó, mostrar error
+        setTimeout(function() {
+            var loadingScreen = document.getElementById('loading-screen');
+            if (loadingScreen && loadingScreen.style.display !== 'none') {
+                console.error('Timeout: Add-in no se inicializó después de 10 segundos');
+                loadingScreen.innerHTML = '<div style="padding:20px;color:#a4262c;text-align:center;"><h3>⚠️ Error de Carga</h3><p>El complemento no pudo inicializarse correctamente.</p><p style="font-size:14px;margin-top:15px;">Posibles causas:</p><ul style="text-align:left;font-size:12px;"><li>Office.js no se cargó</li><li>Error en el código JavaScript</li><li>Problema de red</li></ul><button onclick="location.reload()" style="margin-top:15px;padding:8px 16px;background:#0078d4;color:white;border:none;border-radius:2px;cursor:pointer;">Recargar</button><p style="font-size:11px;margin-top:15px;color:#666;">Presiona F12 para ver detalles en la consola</p></div>';
+            }
+        }, 10000);
+        
+        window.addEventListener('error', function(e) {
+            console.error('Error global capturado:', e.error);
+            var loadingScreen = document.getElementById('loading-screen');
+            if (loadingScreen && loadingScreen.style.display !== 'none') {
+                loadingScreen.innerHTML = '<div style="padding:20px;color:#a4262c;"><h3>Error de inicialización</h3><p>' + e.message + '</p><p style="font-size:12px;">Presiona F12 para ver detalles en la consola</p><button onclick="location.reload()" style="margin-top:10px;padding:8px 16px;background:#0078d4;color:white;border:none;border-radius:2px;cursor:pointer;">Recargar</button></div>';
+            }
+        });
+        
+        window.addEventListener('unhandledrejection', function(e) {
+            console.error('Promise rechazada:', e.reason);
+        });
+    </script>
+
     <!-- For more information on Fluent UI, visit https://developer.microsoft.com/fluentui#/. -->
     <link rel="stylesheet" href="https://res-1.cdn.office.net/files/fabric-cdn-prod_20230815.002/office-ui-fabric-core/11.1.0/css/fabric.min.css"/>
 
@@ -21,6 +45,21 @@
 </head>
 
 <body class="ms-font-m ms-welcome ms-Fabric">
+    <!-- Pantalla de carga inicial -->
+    <div id="loading-screen" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: white; display: flex; align-items: center; justify-content: center; z-index: 9999;">
+        <div style="text-align: center;">
+            <div style="border: 4px solid #f3f3f3; border-top: 4px solid #0078d4; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto 15px;"></div>
+            <p>Inicializando Add-in Azurriga...</p>
+            <p style="font-size: 12px; color: #666;">Cargando Office.js</p>
+        </div>
+    </div>
+    <style>
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+
     <header class="ms-welcome__header ms-bgColor-neutralLighter">
         <img width="90" height="90" src="../../assets/logo-filled.png" alt="Azurriga" title="Azurriga" />
          <!-- <h1 class="ms-font-su">Welcome</h1>-->
