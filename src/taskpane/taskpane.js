@@ -53,11 +53,187 @@ let cachedCurrencies = [];
 let cachedQuotationPlaces = [];
 
 /**
+ * Clase para almacenar información de movimientos contables
+ */
+class MovementData {
+  constructor(movement) {
+    this.status = movement.Status;
+    this.isDebit = movement.IsDebit;
+    this.flowCode = movement.FlowCode ? movement.FlowCode.Code : null;
+    this.budgetCode = movement.BudgetCode ? movement.BudgetCode.Code : null;
+    this.accountId = movement.Account ? movement.Account.Id : null;
+    this.accountCode = movement.Account && movement.Account.Master ? movement.Account.Master.Code : null;
+    this.currencyId = movement.TrnCurrency ? movement.TrnCurrency.Id : null;
+  }
+}
+
+/**
+ * Variable global para almacenar los movimientos con información completa
+ * @type {Array<MovementData>}
+ */
+let cachedMovements = [];
+
+/**
+ * Variable global para el filtro isDebit activo
+ * @type {boolean|null}
+ */
+let activeIsDebitFilter = null;
+
+/**
  * Variables globales para almacenar el rango de fechas seleccionado
  * @type {string|null}
  */
 let selectedDateFrom = null;
 let selectedDateTo = null;
+
+/**
+ * Obtiene las cuentas filtradas según el activeIsDebitFilter
+ * 
+ * @returns {Array} Array de objetos Account filtrado por isDebit
+ */
+function getFilteredAccounts() {
+  if (activeIsDebitFilter === null || cachedMovements.length === 0) {
+    return cachedAccounts;
+  }
+  
+  const filteredAccountIds = new Set(
+    cachedMovements
+      .filter(mov => mov.isDebit === activeIsDebitFilter)
+      .map(mov => mov.accountId)
+  );
+  
+  return cachedAccounts.filter(acc => filteredAccountIds.has(acc.Id));
+}
+
+/**
+ * Obtiene los códigos de flujo filtrados según el activeIsDebitFilter
+ * 
+ * @returns {Array} Array de objetos FlowCode filtrado por isDebit
+ */
+function getFilteredFlowCodes() {
+  if (activeIsDebitFilter === null || cachedMovements.length === 0) {
+    return cachedFlowCodes;
+  }
+  
+  const filteredFlowCodes = new Set(
+    cachedMovements
+      .filter(mov => mov.isDebit === activeIsDebitFilter && mov.flowCode)
+      .map(mov => mov.flowCode)
+  );
+  
+  return cachedFlowCodes.filter(fc => filteredFlowCodes.has(fc.Code));
+}
+
+/**
+ * Obtiene los códigos presupuestarios filtrados según el activeIsDebitFilter
+ * 
+ * @returns {Array} Array de objetos BudgetCode filtrado por isDebit
+ */
+function getFilteredBudgetCodes() {
+  if (activeIsDebitFilter === null || cachedMovements.length === 0) {
+    return cachedBudgetCodes;
+  }
+  
+  const filteredBudgetCodes = new Set(
+    cachedMovements
+      .filter(mov => mov.isDebit === activeIsDebitFilter && mov.budgetCode)
+      .map(mov => mov.budgetCode)
+  );
+  
+  return cachedBudgetCodes.filter(bc => filteredBudgetCodes.has(bc.Code));
+}
+
+/**
+ * Obtiene las divisas filtradas según el activeIsDebitFilter
+ * 
+ * @returns {Array} Array de objetos Currency filtrado por isDebit
+ */
+function getFilteredCurrencies() {
+  if (activeIsDebitFilter === null || cachedMovements.length === 0) {
+    return cachedCurrencies;
+  }
+  
+  const filteredCurrencyIds = new Set(
+    cachedMovements
+      .filter(mov => mov.isDebit === activeIsDebitFilter && mov.currencyId)
+      .map(mov => mov.currencyId)
+  );
+  
+  return cachedCurrencies.filter(c => filteredCurrencyIds.has(c.Id));
+}
+
+/**
+ * Configura el listener de selección en Excel para detectar cuando el usuario
+ * selecciona una celda con el valor IsDebit y actualiza el filtro activo
+ * 
+ * @async
+ */
+async function setupExcelSelectionListener() {
+  try {
+    await Excel.run(async (context) => {
+      // Registrar evento de cambio de selección
+      context.workbook.worksheets.onSelectionChanged.add(async (event) => {
+        await Excel.run(async (ctx) => {
+          try {
+            // Obtener la hoja y el rango seleccionado
+            const sheet = ctx.workbook.worksheets.getItem(event.worksheetId);
+            const range = sheet.getRange(event.address);
+            range.load(["values", "columnIndex"]);
+            await ctx.sync();
+            
+            // Buscar si la hoja tiene una columna "IsDebit"
+            const usedRange = sheet.getUsedRange();
+            usedRange.load(["values"]);
+            await ctx.sync();
+            
+            // La primera fila debería tener los headers
+            const headers = usedRange.values[0];
+            const isDebitColumnIndex = headers.indexOf("IsDebit");
+            
+            if (isDebitColumnIndex >= 0) {
+              // Obtener el valor de IsDebit en la fila seleccionada
+              const selectedRow = range.rowIndex;
+              if (selectedRow > 0) { // No la fila de headers
+                const isDebitCell = usedRange.getCell(selectedRow, isDebitColumnIndex);
+                isDebitCell.load("values");
+                await ctx.sync();
+                
+                const isDebitValue = isDebitCell.values[0][0];
+                
+                // Actualizar el filtro activo
+                const previousFilter = activeIsDebitFilter;
+                if (isDebitValue === true || isDebitValue === "true" || isDebitValue === "TRUE") {
+                  activeIsDebitFilter = true;
+                } else if (isDebitValue === false || isDebitValue === "false" || isDebitValue === "FALSE") {
+                  activeIsDebitFilter = false;
+                } else {
+                  activeIsDebitFilter = null;
+                }
+                
+                // Si cambió el filtro, recargar los combos
+                if (previousFilter !== activeIsDebitFilter) {
+                  console.log(`Filtro IsDebit actualizado: ${activeIsDebitFilter}`);
+                  // Recargar el combo de cuentas si está visible
+                  const accountSelect = document.getElementById("accountSelect");
+                  if (accountSelect && !accountSelect.closest('.hidden')) {
+                    loadAccounts();
+                  }
+                }
+              }
+            }
+          } catch (error) {
+            console.log("Error al detectar IsDebit:", error.message);
+          }
+        });
+      });
+      
+      await context.sync();
+      console.log("Listener de selección de Excel configurado");
+    });
+  } catch (error) {
+    console.error("Error al configurar listener de selección:", error);
+  }
+}
 
 /**
  * Función de inicialización del add-in
@@ -85,6 +261,9 @@ function initializeAddin(info) {
       document.getElementById("login").onclick = login;
       document.getElementById("download").onclick = showDownloadModal;
       document.getElementById("import").onclick = importData;
+      
+      // Configurar listener de selección de Excel para detectar cambios en IsDebit
+      setupExcelSelectionListener();
     
     // Event listener para cambio de tipo de descarga
     document.getElementById("downloadType").onchange = function() {
@@ -455,15 +634,22 @@ async function loadAccounts() {
       // Almacenar las cuentas en el caché global
       cachedAccounts = data.value;
       
+      // Obtener cuentas filtradas según activeIsDebitFilter
+      const accountsToShow = getFilteredAccounts();
+      
+      if (activeIsDebitFilter !== null) {
+        console.log(`Filtrando cuentas por IsDebit=${activeIsDebitFilter}: ${accountsToShow.length}/${cachedAccounts.length}`);
+      }
+      
       // Agregar cada cuenta al combo
-      data.value.forEach(account => {
+      accountsToShow.forEach(account => {
         const option = document.createElement('option');
         option.value = account.Id;  // Valor interno: ID
         option.textContent = account.Code;  // Texto visible: Code
         accountSelect.appendChild(option);
       });
       
-      console.log(`${data.value.length} cuentas cargadas correctamente`);
+      console.log(`${accountsToShow.length} cuentas cargadas correctamente`);
     } else {
       // No hay cuentas activas
       const noDataOption = document.createElement('option');
@@ -960,6 +1146,13 @@ export async function download(downloadType = 'cuentas', recordLimit = '50', sel
       }
 
       const records = data.value; // OData devuelve los datos en data.value
+      
+      // Si es descarga de movimientos, almacenar en caché para filtrado posterior
+      if (downloadType === 'movimientos') {
+        console.log('Almacenando movimientos en caché...');
+        cachedMovements = records.map(record => new MovementData(record));
+        console.log(`${cachedMovements.length} movimientos almacenados en caché`);
+      }
       
       // Determinar el nombre de la hoja según el tipo de descarga
       let sheetName = '';
@@ -2058,12 +2251,13 @@ async function createMovimientosSheet() {
       };
       
       // Agregar dropdown para la columna Account (columna J, índice 9)
-      if (cachedAccounts && cachedAccounts.length > 0) {
+      const filteredAccounts = getFilteredAccounts();
+      if (filteredAccounts && filteredAccounts.length > 0) {
         const accountColumn = sheet.getRange("J2:J1048576");
         const accountValidation = accountColumn.dataValidation;
         
         // Crear la lista de valores separados por comas (solo los códigos de cuenta)
-        const accountCodes = cachedAccounts.map(acc => acc.Code).join(",");
+        const accountCodes = filteredAccounts.map(acc => acc.Code).join(",");
         
         accountValidation.rule = {
           list: {
@@ -2083,17 +2277,18 @@ async function createMovimientosSheet() {
           title: "Cuenta inválida"
         };
         
-        console.log(`Dropdown de cuentas configurado con ${cachedAccounts.length} cuentas`);
+        console.log(`Dropdown de cuentas configurado con ${filteredAccounts.length} cuentas`);
       } else {
         console.warn("No hay cuentas en caché. Descargue las cuentas primero para habilitar el dropdown.");
       }
       
       // Agregar dropdown para la columna BudgetCode (columna K, índice 10)
-      if (cachedBudgetCodes && cachedBudgetCodes.length > 0) {
+      const filteredBudgetCodes = getFilteredBudgetCodes();
+      if (filteredBudgetCodes && filteredBudgetCodes.length > 0) {
         const budgetCodeColumn = sheet.getRange("K2:K1048576");
         const budgetCodeValidation = budgetCodeColumn.dataValidation;
         
-        const budgetCodes = cachedBudgetCodes.map(bc => bc.Code).join(",");
+        const budgetCodes = filteredBudgetCodes.map(bc => bc.Code).join(",");
         
         budgetCodeValidation.rule = {
           list: {
@@ -2113,15 +2308,16 @@ async function createMovimientosSheet() {
           title: "Código presupuestario inválido"
         };
         
-        console.log(`Dropdown de códigos presupuestarios configurado con ${cachedBudgetCodes.length} códigos`);
+        console.log(`Dropdown de códigos presupuestarios configurado con ${filteredBudgetCodes.length} códigos`);
       }
       
       // Agregar dropdown para la columna FlowCode (columna L, índice 11)
-      if (cachedFlowCodes && cachedFlowCodes.length > 0) {
+      const filteredFlowCodes = getFilteredFlowCodes();
+      if (filteredFlowCodes && filteredFlowCodes.length > 0) {
         const flowCodeColumn = sheet.getRange("L2:L1048576");
         const flowCodeValidation = flowCodeColumn.dataValidation;
         
-        const flowCodes = cachedFlowCodes.map(fc => fc.Code).join(",");
+        const flowCodes = filteredFlowCodes.map(fc => fc.Code).join(",");
         
         flowCodeValidation.rule = {
           list: {
@@ -2141,16 +2337,17 @@ async function createMovimientosSheet() {
           title: "Flujo de caja inválido"
         };
         
-        console.log(`Dropdown de flujos de caja configurado con ${cachedFlowCodes.length} flujos`);
+        console.log(`Dropdown de flujos de caja configurado con ${filteredFlowCodes.length} flujos`);
       }
       
       // Agregar dropdown para la columna TrnCurrency (columna M, índice 12)
-      if (cachedCurrencies && cachedCurrencies.length > 0) {
+      const filteredCurrencies = getFilteredCurrencies();
+      if (filteredCurrencies && filteredCurrencies.length > 0) {
         const currencyColumn = sheet.getRange("M2:M1048576");
         const currencyValidation = currencyColumn.dataValidation;
         
         // Crear la lista de códigos de divisa separados por comas
-        const currencyCodes = cachedCurrencies.map(c => c.Code).join(",");
+        const currencyCodes = filteredCurrencies.map(c => c.Code).join(",");
         
         currencyValidation.rule = {
           list: {
@@ -2170,7 +2367,7 @@ async function createMovimientosSheet() {
           title: "Divisa inválida"
         };
         
-        console.log(`Dropdown de divisas configurado con ${cachedCurrencies.length} divisas`);
+        console.log(`Dropdown de divisas configurado con ${filteredCurrencies.length} divisas`);
       } else {
         console.warn("No hay divisas en caché. Descargue las divisas primero para habilitar el dropdown.");
       }
