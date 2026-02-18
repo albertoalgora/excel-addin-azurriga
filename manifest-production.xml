@@ -6,11 +6,10 @@
   <DefaultLocale>es-ES</DefaultLocale>
   <DisplayName DefaultValue="Add-in Azurriga para Excel"/>
   <Description DefaultValue="Conecta Excel con tu servidor OData para descargar cuentas, flujos de caja y movimientos contables de forma rápida y automática. Autenticación segura y formato automático de datos."/>
-  <IconUrl DefaultValue="https://albertoalgora.github.io/excel-addin-azurriga/assets/icon-32.png"/>
-  <HighResolutionIconUrl DefaultValue="https://albertoalgora.github.io/excel-addin-azurriga/assets/icon-64.png"/>
-  <SupportUrl DefaultValue="https://albertoalgora.github.io/excel-addin-azurriga/support.html"/>
+  <IconUrl DefaultValue="https://excel-addin-azurriga.vercel.app/assets/icon-32.png"/>
+  <HighResolutionIconUrl DefaultValue="https://excel-addin-azurriga.vercel.app/assets/icon-64.png"/>
+  <SupportUrl DefaultValue="https://excel-addin-azurriga.vercel.app/support.html"/>
   <AppDomains>
-    <AppDomain>https://albertoalgora.github.io</AppDomain>
     <AppDomain>https://excel-addin-azurriga.vercel.app</AppDomain>
     <AppDomain>https://azprod.azurriga.com</AppDomain>
   </AppDomains>
@@ -18,7 +17,7 @@
     <Host Name="Workbook"/>
   </Hosts>
   <DefaultSettings>
-    <SourceLocation DefaultValue="https://albertoalgora.github.io/excel-addin-azurriga/taskpane.html"/>
+    <SourceLocation DefaultValue="https://excel-addin-azurriga.vercel.app/taskpane.html"/>
   </DefaultSettings>
   <Permissions>ReadWriteDocument</Permissions>
   <VersionOverrides xmlns="http://schemas.microsoft.com/office/taskpaneappversionoverrides" xsi:type="VersionOverridesV1_0">
@@ -64,14 +63,14 @@
     </Hosts>
     <Resources>
       <bt:Images>
-        <bt:Image id="Icon.16x16" DefaultValue="https://albertoalgora.github.io/excel-addin-azurriga/assets/icon-16.png"/>
-        <bt:Image id="Icon.32x32" DefaultValue="https://albertoalgora.github.io/excel-addin-azurriga/assets/icon-32.png"/>
-        <bt:Image id="Icon.80x80" DefaultValue="https://albertoalgora.github.io/excel-addin-azurriga/assets/icon-80.png"/>
+        <bt:Image id="Icon.16x16" DefaultValue="https://excel-addin-azurriga.vercel.app/assets/icon-16.png"/>
+        <bt:Image id="Icon.32x32" DefaultValue="https://excel-addin-azurriga.vercel.app/assets/icon-32.png"/>
+        <bt:Image id="Icon.80x80" DefaultValue="https://excel-addin-azurriga.vercel.app/assets/icon-80.png"/>
       </bt:Images>
       <bt:Urls>
         <bt:Url id="GetStarted.LearnMoreUrl" DefaultValue="https://github.com/albertoalgora/excel-addin-azurriga"/>
-        <bt:Url id="Commands.Url" DefaultValue="https://albertoalgora.github.io/excel-addin-azurriga/commands.html"/>
-        <bt:Url id="Taskpane.Url" DefaultValue="https://albertoalgora.github.io/excel-addin-azurriga/taskpane.html"/>
+        <bt:Url id="Commands.Url" DefaultValue="https://excel-addin-azurriga.vercel.app/commands.html"/>
+        <bt:Url id="Taskpane.Url" DefaultValue="https://excel-addin-azurriga.vercel.app/taskpane.html"/>
       </bt:Urls>
       <bt:ShortStrings>
         <bt:String id="GetStarted.Title" DefaultValue="Get started with Add-in Azurriga"/>
