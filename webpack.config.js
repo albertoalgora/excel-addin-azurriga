@@ -55,17 +55,7 @@ module.exports = async (env, options) => {
         filename: "taskpane.html",
         template: "./src/taskpane/taskpane.html",
         chunks: ["polyfill", "taskpane"],
-        minify: {
-          collapseWhitespace: true,
-          removeComments: true,
-          removeRedundantAttributes: true,
-          removeScriptTypeAttributes: true,
-          removeStyleLinkTypeAttributes: true,
-          useShortDoctype: true,
-          minifyCSS: true,
-          minifyJS: true,
-          decodeEntities: false, // Preservar entidades HTML
-        },
+        minify: false, // Desactivar minificación para compatibilidad con Excel Desktop
       }),
       new CopyWebpackPlugin({
         patterns: [
@@ -90,17 +80,7 @@ module.exports = async (env, options) => {
         filename: "commands.html",
         template: "./src/commands/commands.html",
         chunks: ["polyfill", "commands"],
-        minify: {
-          collapseWhitespace: true,
-          removeComments: true,
-          removeRedundantAttributes: true,
-          removeScriptTypeAttributes: true,
-          removeStyleLinkTypeAttributes: true,
-          useShortDoctype: true,
-          minifyCSS: true,
-          minifyJS: true,
-          decodeEntities: false, // Preservar entidades HTML
-        },
+        minify: false, // Desactivar minificación para compatibilidad con Excel Desktop
       }),
     ],
     devServer: {
